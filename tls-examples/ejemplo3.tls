@@ -1,0 +1,50 @@
+include a.lib;
+
+function getDiscount = float(basePrice = float, discount = float)
+	def newPrice of float;
+	newPrice = newPrice * (discount / 100);
+	return newPrice;
+endfunction
+
+function applyInterest = float(base = float, interest = float, months = int)
+	while (months > 0)
+		base = base + (base * interest / 100);
+		months--;
+	endwhile
+
+	return base;
+endfunction
+
+function applyInterestWithPrint = float(base = float, interest = float, months = int)
+	def it of int;
+
+	for it (1 to months)
+		base = base + (base * interest / 100);
+		write("Base of month ", it, " is ", base);
+	endfor
+
+	return base;
+endfunction
+
+def price of float;
+def months of int;
+def interest of float;
+def discount of float;
+
+def totalPrice of float;
+
+class
+	price = 1000.0;
+	months = 12;
+	interest = 2.0;
+	discount = 15.0;
+
+	if (months >= 6) // 15% off when paying for more 6 or more months
+		price = getDiscount(price, discount);
+	endif
+
+	totalPrice = applyInterestWithPrint(price, interest, months);
+
+	write("The total price will be: ", totalPrice);
+
+endclass

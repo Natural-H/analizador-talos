@@ -1,0 +1,15 @@
+include a.lib;
+
+const testing = "testing";
+
+def test of int;
+const test = 12;
+
+def input of string;
+
+class
+	write("What's your name? ");
+	read(input);
+
+	write("Hello: ", input);
+endclass

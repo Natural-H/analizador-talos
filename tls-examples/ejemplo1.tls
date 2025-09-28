@@ -1,0 +1,26 @@
+include stdlib.lib;
+
+def result of int;
+def argCount of int;
+def argValue of string;
+
+function main = void (argc = int, argv = string)
+	write("Hello world!");
+	return 0;
+endfunction
+
+class
+	argCount = 0;
+	argValue = "";
+	result = main(argCount, argValue);
+
+	if (result == 0)
+		write("Salida exitosa!");
+	elseif (result < 0)
+		write("Maybe error?");
+	else
+		write("Salida definitivamente no exitosa.");
+	endif
+
+	write(" Exit code: ", result);
+endclass

@@ -16,6 +16,8 @@ namespace ui
         grammaryzer = new Grammaryzer();
         highlighter = new Highlighter(ui->sourcePanel->document());
 
+        ui->sourcePanel->setPlainText("class\n\nendclass""");
+
         updateCounters();
 
         connect(ui->checkUseStyles, &QCheckBox::checkStateChanged, this, [&]

@@ -7,11 +7,13 @@
 Grammaryzer::Grammaryzer()
 {
     tokenizer = new Tokenizer();
+    asserter = new Asserter();
 }
 
 Grammaryzer::~Grammaryzer()
 {
     delete tokenizer;
+    delete asserter;
 }
 
 std::string Grammaryzer::checkGrammar() const
@@ -43,17 +45,30 @@ std::string Grammaryzer::checkGrammar() const
         {
             if (currentToken.state == 499 && top == 499) // EOF
                 return "La gramática es válida!";
+
             if (top != currentToken.state)
             {
                 return "Error: Se esperaba Token " + std::to_string(top) + " (" + Tokenizer::tokenMap[top] + ")" +
-                    " pero se encontró Token " + std::to_string(currentToken.state) + " (" +
-                    Tokenizer::tokenMap[currentToken.state] + ")" + " en índice " + std::to_string(currentToken.index)
-                    + " (" + std::to_string(currentToken.line + 1) + ":" +
-                    std::to_string(currentToken.indexLine + 1) + ")";
+                       " pero se encontró Token " + std::to_string(currentToken.state) + " (" +
+                       Tokenizer::tokenMap[currentToken.state] + ")" + " en índice " + std::to_string(currentToken.index)
+                       + " (" + std::to_string(currentToken.line + 1) + ":" +
+                       std::to_string(currentToken.indexLine + 1) + ")";
+            }
+
+            stack.pop();
+
+            while (stack.top() >= 2000)
+            {
+                for_each(onTopActions.begin(), onTopActions.end(), [&](ProductionAction action) {
+                    if (std::find(action.triggers.cbegin(), action.triggers.cend(), stack.top()) != action.triggers.cend()) {
+                        action.action(currentToken);
+                    }
+                });
+
+                stack.pop();
             }
 
             currentToken = tokenizer->findNextToken();
-            stack.pop();
             continue;
         }
 
@@ -87,11 +102,10 @@ std::string Grammaryzer::checkGrammar() const
 
         auto array = matrizProducciones[production - 1];
         stack.pop();
-        if (array[1] == -100) // Empty production
+        if (array[0] == -100) // Empty production
             continue;
 
-        // the matrix is already inverted
-        for_each(array.begin() + 1, array.end(), [&](const int prod)
+        for_each(array.rbegin(), array.rend(), [&](const int prod)
         {
             stack.emplace(prod);
         });

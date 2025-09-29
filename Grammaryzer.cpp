@@ -23,6 +23,14 @@ std::string Grammaryzer::checkGrammar() const
     stack.emplace(1); // Push initial state
     Token currentToken = tokenizer->findNextToken();
 
+    asserter->variablesTypes.clear();
+
+    while (!asserter->typesStack.empty())
+        asserter->typesStack.pop();
+
+    while (!asserter->operatorsStack.empty())
+        asserter->operatorsStack.pop();
+
     do
     {
         if (currentToken.isError())
@@ -40,15 +48,25 @@ std::string Grammaryzer::checkGrammar() const
             continue;
         }
 
-        int top = stack.top();
-        if (top > 43)
+        while (stack.top() >= 2000)
         {
-            if (currentToken.state == 499 && top == 499) // EOF
+            for_each(afterStateActions.begin(), afterStateActions.end(), [&](ProductionAction action) {
+                if (std::find(action.triggers.cbegin(), action.triggers.cend(), stack.top()) != action.triggers.cend()) {
+                    action.action(currentToken);
+                }
+            });
+
+            stack.pop();
+        }
+
+        if (stack.top() > 43)
+        {
+            if (currentToken.state == 499 && stack.top() == 499) // EOF
                 return "La gramática es válida!";
 
-            if (top != currentToken.state)
+            if (stack.top() != currentToken.state)
             {
-                return "Error: Se esperaba Token " + std::to_string(top) + " (" + Tokenizer::tokenMap[top] + ")" +
+                return "Error: Se esperaba Token " + std::to_string(stack.top()) + " (" + Tokenizer::tokenMap[stack.top()] + ")" +
                        " pero se encontró Token " + std::to_string(currentToken.state) + " (" +
                        Tokenizer::tokenMap[currentToken.state] + ")" + " en índice " + std::to_string(currentToken.index)
                        + " (" + std::to_string(currentToken.line + 1) + ":" +
@@ -81,7 +99,7 @@ std::string Grammaryzer::checkGrammar() const
                 std::to_string(currentToken.index) + " (" + std::to_string(currentToken.line + 1) + ":" +
                 std::to_string(currentToken.indexLine + 1) + ")";
         }
-        const int production = matrizPredictiva[top - 1][row->second];
+        const int production = matrizPredictiva[stack.top() - 1][row->second];
 
         if (600 <= production && production <= 999)
         {

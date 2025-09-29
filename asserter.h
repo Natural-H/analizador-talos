@@ -25,7 +25,9 @@ public:
         Add = 0,
         Dif,
         Mul,
-        Div
+        Div,
+        Equal,
+        Mff,
     };
 
     std::map<std::string, Type> variablesTypes;
@@ -41,7 +43,7 @@ public:
             {Int, Float, Error, Error, Error}, // add
             {Int, Float, Error, Error, Error}, // diff
             {Int, Float, Error, Error, Error}, // mult
-            {Int, Float, Error, Error, Error}  // div
+            {Int, Float, Error, Error, Error},  // div
         },
         {   // Float allowed operators
             {Float, Float, Error, Error, Error},

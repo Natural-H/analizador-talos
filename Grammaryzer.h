@@ -34,28 +34,147 @@ public:
 
     std::vector<ProductionAction> onTopActions = {
         {{2000}, [&](Token &t) { // for debug purposes only
-             std::cout << "types table: " << std::endl;
-             std::for_each(asserter->variablesTypes.cbegin(), asserter->variablesTypes.cend(), [](auto item)
-                           { std::cout << item.first << " | " << item.second << std::endl; });
-         }
-        },
-        {{2001}, [&](Token &t) {
-             std::cout << "Got: " << t.content << std::endl;
-             asserter->variablesTypes.insert({t.content, Asserter::Type::Unasigned});
-         }
-        },
-        {{2002}, [&](Token &t) {
-             std::cout << "Got Type: " << t.content << std::endl;
-             std::for_each(asserter->variablesTypes.begin(), asserter->variablesTypes.end(), [&](auto &item) {
-                 if (item.second == Asserter::Type::Unasigned)
-                    item.second = (Asserter::Type)(t.state - 1005);
-             });
+                std::cout << "types table: " << std::endl;
+                std::for_each(asserter->variablesTypes.cbegin(), asserter->variablesTypes.cend(), [](auto item)
+                              { std::cout << item.first << " | " << item.second << std::endl; });
             }
         },
+        {{2001}, [&](Token &t) {
+                std::cout << "Got: " << t.content << std::endl;
+
+                if (asserter->variablesTypes.find(t.content) != asserter->variablesTypes.end()) {
+                    std::cout << "Error: " << t.content << " already in here." << std::endl;
+                    return;
+                }
+
+                asserter->variablesTypes.insert({t.content, Asserter::Type::Unasigned});
+            }
+        },
+        {{2002}, [&](Token &t) {
+                std::cout << "Got Type: " << t.content << std::endl;
+                std::for_each(asserter->variablesTypes.begin(), asserter->variablesTypes.end(), [&](auto &item) {
+                    if (item.second == Asserter::Type::Unasigned)
+                        item.second = (Asserter::Type)(t.state - 1005);
+                });
+            }
+        },
+        {{2003}, [&](Token &t) {
+                std::cout << "Got variable: " << t.content << std::endl;
+
+                auto item = asserter->variablesTypes.find(t.content);
+                if (item == asserter->variablesTypes.end()) {
+                    std::cout << "Error: item " << t.content << " not found!" << std::endl;
+                    return;
+                }
+
+                asserter->typesStack.emplace(item->second);
+                std::cout << "typesStack top: " << asserter->typesStack.top() << std::endl;
+            }
+        },
+        {{2004}, [&](Token &t) {
+                std::cout << "Got equal sign: " << t.content << std::endl;
+
+                asserter->operatorsStack.emplace(Asserter::Operator::Equal);
+            }
+        },
+        {{2007}, [&](Token &t) {
+             std::cout << "Got item: " << t.content << " added to operatorsStack" << std::endl;
+             asserter->operatorsStack.emplace((Asserter::Operator)(t.state - 105));
+             std::cout << "opStack top: " << asserter->operatorsStack.top() << std::endl;
+            }
+        },
+        {{2008}, [&](Token &t) {
+             std::cout << "Got item: " << t.content << " added MFF to operatorsStack" << std::endl;
+             asserter->operatorsStack.emplace(Asserter::Operator::Mff);
+            }
+        },
+        {{2009}, [&](Token &t) {
+             std::cout << "Got item: " << t.content << " removed MFF from operatorsStack" << std::endl;
+             asserter->operatorsStack.pop();
+             std::cout << "Current top: " << asserter->operatorsStack.top() << std::endl;
+            }
+        },
+        {{2010}, [&](Token &t) {
+             std::cout << "Got item: " << t.content << " time to check the operation" << std::endl;
+
+             if (asserter->operatorsStack.top() != Asserter::Operator::Equal) {
+                 std::cout << "Top of operators Stack wasn't equals sign, it was: " << asserter->operatorsStack.top() << std::endl;
+                 return;
+             }
+
+             asserter->operatorsStack.pop();
+
+             auto type1 = asserter->typesStack.top();
+             asserter->typesStack.pop();
+             auto type2 = asserter->typesStack.top();
+             asserter->typesStack.pop();
+
+             if (type1 == type2)
+                 std::cout << "Asigned!" << std::endl;
+             else
+                 std::cout << "Error: Types " << type1 << " and " << type2 << " aren't equal!" << std::endl;
+
+             if (!asserter->typesStack.empty())
+                 std::cout << "Assert failed: typesStack is not empty! it has " << asserter->typesStack.size() << " items, top: " << asserter->typesStack.top() << std::endl;
+             if (!asserter->operatorsStack.empty())
+                 std::cout << "Assert failed: operatorsStack is not empty! it has " << asserter->operatorsStack.size() << " items, top: " << asserter->operatorsStack.top() << std::endl;
+            }
+        }
     };
 
     std::vector<ProductionAction> afterStateActions = {
-        {{101}, [&](Token &t) { }}
+        {{2005}, [&](Token &t) {
+                std::cout << "Trying to apply an operator. optop: " << asserter->operatorsStack.top() << " opstack size: " << asserter->operatorsStack.size() << " tystack size: " << asserter->typesStack.size() << std::endl;
+                std::vector<Asserter::Operator> expectedOperators = {
+                    Asserter::Operator::Mul,
+                    Asserter::Operator::Div,
+                };
+
+                while (std::find(expectedOperators.cbegin(), expectedOperators.cend(), asserter->operatorsStack.top()) != expectedOperators.cend()) {
+                    auto operand1 = asserter->typesStack.top();
+                    asserter->typesStack.pop();
+                    auto operand2 = asserter->typesStack.top();
+                    asserter->typesStack.pop();
+
+                    auto op = asserter->operatorsStack.top();
+                    std::cout << "Applying " << operand1 << ", " << operand2 << " with operator: " << op << std::endl;
+                    auto result = asserter->applyOperator(operand1, operand2, op);
+                    if (result == Asserter::Type::Error) {
+                        std::cout << "Error: incompatible types (" << operand1 << " ," << operand2 << ") with operator: " << op << std::endl;
+                        return;
+                    }
+                    asserter->typesStack.emplace(result);
+
+                    asserter->operatorsStack.pop();
+                }
+            }
+        },
+        {{2006}, [&](Token &t) {
+                std::cout << "Trying to apply an operator. optop: " << asserter->operatorsStack.top() << " opstack size: " << asserter->operatorsStack.size() << " tystack size: " << asserter->typesStack.size() << std::endl;
+                std::vector<Asserter::Operator> expectedOperators = {
+                    Asserter::Operator::Add,
+                    Asserter::Operator::Dif,
+                };
+
+                while (std::find(expectedOperators.cbegin(), expectedOperators.cend(), asserter->operatorsStack.top()) != expectedOperators.cend()) {
+                    auto operand1 = asserter->typesStack.top();
+                    asserter->typesStack.pop();
+                    auto operand2 = asserter->typesStack.top();
+                    asserter->typesStack.pop();
+
+                    auto op = asserter->operatorsStack.top();
+                    std::cout << "Applying " << operand1 << ", " << operand2 << " with operator: " << op << std::endl;
+                    auto result = asserter->applyOperator(operand1, operand2, op);
+                    if (result == Asserter::Type::Error) {
+                        std::cout << "Error: incompatible types (" << operand1 << " ," << operand2 << ") with operator: " << op << std::endl;
+                        return;
+                    }
+                    asserter->typesStack.emplace(result);
+
+                    asserter->operatorsStack.pop();
+                }
+            }
+        },
     };
 
     static std::map<int, std::vector<int>> expectedTokens;
@@ -375,7 +494,7 @@ private:
         { -100 },
         { 124, 11 },
         { -100 },
-        { 101, 14 },
+        { 101, 2003, 14 },
         { 28, 123, 13 },
         { 16, 123, 13 },
         { 19, 123, 13 },
@@ -385,9 +504,9 @@ private:
         { 22, 13 },
         { 27, 13 },
         { -100 },
-        { 15, 123, 13 },
+        { 15, 123, 2010, 13 },
         { 21, 123, 13 },
-        { 109, 29 },
+        { 109, 2004, 29 },
         { 1020, 119, 17, 120 },
         { 29, 18 },
         { 124, 17 },
@@ -423,19 +542,19 @@ private:
         { 112 },
         { 113 },
         { 114 },
-        { 39, 38 },
-        { 105, 37 },
-        { 106, 37 },
+        { 39, 2006, 38 },
+        { 105, 2007, 37 },
+        { 106, 2007, 37 },
         { -100 },
-        { 41, 40 },
-        { 107, 39 },
-        { 108, 39 },
+        { 41, 2005, 40 },
+        { 107, 2007, 39 },
+        { 108, 2007, 39 },
         { 128, 39 },
         { 133, 39 },
         { -100 },
-        { 101, 42 },
-        { 9 },
-        { 119, 29, 120 },
+        { 101, 2003, 42 },
+        { 9, 2003 },
+        { 119, 2008, 29, 120, 2009 },
         { 119, 43, 120 },
         { -100 },
         { 101, 6 },

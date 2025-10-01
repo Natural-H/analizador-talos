@@ -50,13 +50,19 @@ std::string Grammaryzer::checkGrammar() const
 
         while (stack.top() >= 2000)
         {
-            for_each(afterStateActions.begin(), afterStateActions.end(), [&](ProductionAction action) {
-                if (std::find(action.triggers.cbegin(), action.triggers.cend(), stack.top()) != action.triggers.cend()) {
-                    action.action(currentToken);
-                }
+            std::vector<ProductionAction> filtered;
+            std::copy_if(afterStateActions.begin(), afterStateActions.end(), std::back_inserter(filtered), [&](ProductionAction action) {
+                return std::find(action.triggers.cbegin(), action.triggers.cend(), stack.top()) != action.triggers.cend();
             });
 
-            stack.pop();
+            for_each(filtered.begin(), filtered.end(), [&](ProductionAction action) {
+                action.action(currentToken);
+            });
+
+            if (!filtered.empty())
+                stack.pop();
+            else
+                break;
         }
 
         if (stack.top() > 43)
@@ -77,13 +83,19 @@ std::string Grammaryzer::checkGrammar() const
 
             while (stack.top() >= 2000)
             {
-                for_each(onTopActions.begin(), onTopActions.end(), [&](ProductionAction action) {
-                    if (std::find(action.triggers.cbegin(), action.triggers.cend(), stack.top()) != action.triggers.cend()) {
-                        action.action(currentToken);
-                    }
+                std::vector<ProductionAction> filtered;
+                std::copy_if(onTopActions.begin(), onTopActions.end(), std::back_inserter(filtered), [&](ProductionAction action) {
+                    return std::find(action.triggers.cbegin(), action.triggers.cend(), stack.top()) != action.triggers.cend();
                 });
 
-                stack.pop();
+                for_each(filtered.begin(), filtered.end(), [&](ProductionAction action) {
+                    action.action(currentToken);
+                });
+
+                if (!filtered.empty())
+                    stack.pop();
+                else
+                    break;
             }
 
             currentToken = tokenizer->findNextToken();

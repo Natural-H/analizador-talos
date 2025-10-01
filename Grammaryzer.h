@@ -59,11 +59,39 @@ public:
             }
         },
         {{2003}, [&](Token &t) {
-                std::cout << "Got variable: " << t.content << std::endl;
+                std::cout << "Got operand: " << t.content << std::endl;
+
+                if (t.state != 101)
+                {
+                    std::cout << "I think I got a constant value, so, I'm not searching if this exists" << std::endl;
+                    Asserter::Type state;
+
+                    // ugly conversion due'cause I wasn't using the original convention
+                    switch (t.state) {
+                    case Tokenizer::States::entero:
+                        state = Asserter::Type::Int;
+                        break;
+                    case Tokenizer::States::real:
+                    case Tokenizer::States::notacionCientifica:
+                        state = Asserter::Type::Float;
+                        break;
+                    case Tokenizer::States::constanteString:
+                        state = Asserter::Type::String;
+                    case Tokenizer::States::constanteCaracter:
+                        state = Asserter::Type::Char;
+                    }
+
+                    asserter->typesStack.emplace();
+                    return;
+                }
 
                 auto item = asserter->variablesTypes.find(t.content);
                 if (item == asserter->variablesTypes.end()) {
                     std::cout << "Error: item " << t.content << " not found!" << std::endl;
+                    std::cout << "Time to brutally patch this adding " << t.content << " as Real" << std::endl;
+
+                    asserter->variablesTypes[t.content] = Asserter::Type::Float;
+                    asserter->typesStack.emplace(Asserter::Type::Float);
                     return;
                 }
 
@@ -124,7 +152,7 @@ public:
 
     std::vector<ProductionAction> afterStateActions = {
         {{2005}, [&](Token &t) {
-                std::cout << "Trying to apply an operator. optop: " << asserter->operatorsStack.top() << " opstack size: " << asserter->operatorsStack.size() << " tystack size: " << asserter->typesStack.size() << std::endl;
+                std::cout << "Trying to apply Mul/Div operator. optop: " << asserter->operatorsStack.top() << " opstack size: " << asserter->operatorsStack.size() << " tystack size: " << asserter->typesStack.size() << std::endl;
                 std::vector<Asserter::Operator> expectedOperators = {
                     Asserter::Operator::Mul,
                     Asserter::Operator::Div,
@@ -138,19 +166,21 @@ public:
 
                     auto op = asserter->operatorsStack.top();
                     std::cout << "Applying " << operand1 << ", " << operand2 << " with operator: " << op << std::endl;
+                    asserter->operatorsStack.pop();
                     auto result = asserter->applyOperator(operand1, operand2, op);
                     if (result == Asserter::Type::Error) {
                         std::cout << "Error: incompatible types (" << operand1 << " ," << operand2 << ") with operator: " << op << std::endl;
+                        std::cout << "Patching with Real brutal in here..." << std::endl;
+
+                        asserter->typesStack.emplace(Asserter::Type::Float);
                         return;
                     }
                     asserter->typesStack.emplace(result);
-
-                    asserter->operatorsStack.pop();
                 }
             }
         },
         {{2006}, [&](Token &t) {
-                std::cout << "Trying to apply an operator. optop: " << asserter->operatorsStack.top() << " opstack size: " << asserter->operatorsStack.size() << " tystack size: " << asserter->typesStack.size() << std::endl;
+                std::cout << "Trying to apply Add/Diff operator. optop: " << asserter->operatorsStack.top() << " opstack size: " << asserter->operatorsStack.size() << " tystack size: " << asserter->typesStack.size() << std::endl;
                 std::vector<Asserter::Operator> expectedOperators = {
                     Asserter::Operator::Add,
                     Asserter::Operator::Dif,
@@ -163,15 +193,17 @@ public:
                     asserter->typesStack.pop();
 
                     auto op = asserter->operatorsStack.top();
+                    asserter->operatorsStack.pop();
                     std::cout << "Applying " << operand1 << ", " << operand2 << " with operator: " << op << std::endl;
                     auto result = asserter->applyOperator(operand1, operand2, op);
                     if (result == Asserter::Type::Error) {
                         std::cout << "Error: incompatible types (" << operand1 << " ," << operand2 << ") with operator: " << op << std::endl;
+                        std::cout << "Patching with Real brutal in here..." << std::endl;
+
+                        asserter->typesStack.emplace(Asserter::Type::Float);
                         return;
                     }
                     asserter->typesStack.emplace(result);
-
-                    asserter->operatorsStack.pop();
                 }
             }
         },

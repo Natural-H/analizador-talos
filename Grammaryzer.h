@@ -12,83 +12,99 @@
 #include <iostream>
 
 #include "asserter.h"
-
+#include <sstream>
 
 #include <functional>
-#include <map>
-#include <algorithm>
 
 struct ProductionAction {
     std::vector<int> triggers;
-    std::function<void(Token&)> action;
+    std::function<void(Token &)> action;
 };
 
-class Grammaryzer {
+class Grammaryzer : public QObject {
+    Q_OBJECT
+
+signals:
+    void newLogs(const std::ostringstream& oss);
+
 public:
     Grammaryzer();
-    ~Grammaryzer();
 
-    std::string checkGrammar() const;
-    Tokenizer* tokenizer;
-    Asserter* asserter;
+    ~Grammaryzer() override;
+
+    std::string checkGrammar();
+
+    Tokenizer *tokenizer;
+    Asserter *asserter;
+
+    std::ostringstream logsStream;
+
+    void cleanLogs();
 
     std::vector<ProductionAction> onTopActions = {
-        {{2000}, [&](Token &t) { // for debug purposes only
-                std::cout << "types table: " << std::endl;
-                std::for_each(asserter->variablesTypes.cbegin(), asserter->variablesTypes.cend(), [](auto item)
-                              { std::cout << item.first << " | " << item.second << std::endl; });
+        {
+            {2000}, [&](Token &t) {
+                // for debug purposes only
+                logsStream << "types table: " << std::endl;
+                std::for_each(asserter->variablesTypes.cbegin(), asserter->variablesTypes.cend(),
+                              [&](const auto &item) {
+                                  logsStream << item.first << " | " << item.second << std::endl;
+                              });
             }
         },
-        {{2001}, [&](Token &t) {
-                std::cout << "Got: " << t.content << std::endl;
+        {
+            {2001}, [&](Token &t) {
+                logsStream << "Got: " << t.content << std::endl;
 
                 if (asserter->variablesTypes.find(t.content) != asserter->variablesTypes.end()) {
-                    std::cout << "Error: " << t.content << " already in here." << std::endl;
+                    logsStream << "Error: " << t.content << " already in here." << std::endl;
                     return;
                 }
 
                 asserter->variablesTypes.insert({t.content, Asserter::Type::Unasigned});
             }
         },
-        {{2002}, [&](Token &t) {
-                std::cout << "Got Type: " << t.content << std::endl;
+        {
+            {2002}, [&](Token &t) {
+                logsStream << "Got Type: " << t.content << std::endl;
                 std::for_each(asserter->variablesTypes.begin(), asserter->variablesTypes.end(), [&](auto &item) {
                     if (item.second == Asserter::Type::Unasigned)
-                        item.second = (Asserter::Type)(t.state - 1005);
+                        item.second = static_cast<Asserter::Type>(t.state - 1005);
                 });
             }
         },
-        {{2003}, [&](Token &t) {
-                std::cout << "Got operand: " << t.content << std::endl;
+        {
+            {2003}, [&](Token &t) {
+                logsStream << "Got operand: " << t.content << std::endl;
 
-                if (t.state != 101)
-                {
-                    std::cout << "I think I got a constant value, so, I'm not searching if this exists" << std::endl;
+                if (t.state != 101) {
+                    logsStream << "I think I got a constant value, so, I'm not searching if this exists" << std::endl;
                     Asserter::Type state;
 
-                    // ugly conversion due'cause I wasn't using the original convention
+                    // ugly conversion 'cause I wasn't using the original convention
                     switch (t.state) {
-                    case Tokenizer::States::entero:
-                        state = Asserter::Type::Int;
-                        break;
-                    case Tokenizer::States::real:
-                    case Tokenizer::States::notacionCientifica:
-                        state = Asserter::Type::Float;
-                        break;
-                    case Tokenizer::States::constanteString:
-                        state = Asserter::Type::String;
-                    case Tokenizer::States::constanteCaracter:
-                        state = Asserter::Type::Char;
+                        case Tokenizer::States::entero:
+                            state = Asserter::Type::Int;
+                            break;
+                        case Tokenizer::States::real:
+                        case Tokenizer::States::notacionCientifica:
+                            state = Asserter::Type::Float;
+                            break;
+                        case Tokenizer::States::constanteString:
+                            state = Asserter::Type::String;
+                        case Tokenizer::States::constanteCaracter:
+                            state = Asserter::Type::Char;
+                        default: ;
                     }
 
-                    asserter->typesStack.emplace();
+                    asserter->typesStack.emplace(state);
                     return;
                 }
 
-                auto item = asserter->variablesTypes.find(t.content);
+                const auto item = asserter->variablesTypes.find(t.content);
                 if (item == asserter->variablesTypes.end()) {
-                    std::cout << "Error: item " << t.content << " not found!" << std::endl;
-                    std::cout << "Time to brutally patch this adding " << t.content << " as Real" << std::endl;
+                    logsStream << "Error: item " << t.content << " not found!" << std::endl;
+                    logsStream << "Time to brutally patch this adding " << t.content << " as Real" << std::endl;
 
                     asserter->variablesTypes[t.content] = Asserter::Type::Float;
                     asserter->typesStack.emplace(Asserter::Type::Float);
@@ -96,81 +112,95 @@ public:
                 }
 
                 asserter->typesStack.emplace(item->second);
-                std::cout << "typesStack top: " << asserter->typesStack.top() << std::endl;
+                logsStream << "typesStack top: " << asserter->typesStack.top() << std::endl;
             }
         },
-        {{2004}, [&](Token &t) {
-                std::cout << "Got equal sign: " << t.content << std::endl;
+        {
+            {2004}, [&](const Token &t) {
+                logsStream << "Got equal sign: " << t.content << std::endl;
 
                 asserter->operatorsStack.emplace(Asserter::Operator::Equal);
             }
         },
-        {{2007}, [&](Token &t) {
-             std::cout << "Got item: " << t.content << " added to operatorsStack" << std::endl;
-             asserter->operatorsStack.emplace((Asserter::Operator)(t.state - 105));
-             std::cout << "opStack top: " << asserter->operatorsStack.top() << std::endl;
+        {
+            {2007}, [&](Token &t) {
+                logsStream << "Got item: " << t.content << " added to operatorsStack" << std::endl;
+                asserter->operatorsStack.emplace(static_cast<Asserter::Operator>(t.state - 105));
+                logsStream << "opStack top: " << asserter->operatorsStack.top() << std::endl;
             }
         },
-        {{2008}, [&](Token &t) {
-             std::cout << "Got item: " << t.content << " added MFF to operatorsStack" << std::endl;
-             asserter->operatorsStack.emplace(Asserter::Operator::Mff);
+        {
+            {2008}, [&](Token &t) {
+                logsStream << "Got item: " << t.content << " added MFF to operatorsStack" << std::endl;
+                asserter->operatorsStack.emplace(Asserter::Operator::Mff);
             }
         },
-        {{2009}, [&](Token &t) {
-             std::cout << "Got item: " << t.content << " removed MFF from operatorsStack" << std::endl;
-             asserter->operatorsStack.pop();
-             std::cout << "Current top: " << asserter->operatorsStack.top() << std::endl;
+        {
+            {2009}, [&](Token &t) {
+                logsStream << "Got item: " << t.content << " removed MFF from operatorsStack" << std::endl;
+                asserter->operatorsStack.pop();
+                logsStream << "Current top: " << asserter->operatorsStack.top() << std::endl;
             }
         },
-        {{2010}, [&](Token &t) {
-             std::cout << "Got item: " << t.content << " time to check the operation" << std::endl;
+        {
+            {2010}, [&](Token &t) {
+                logsStream << "Got item: " << t.content << " time to check the operation" << std::endl;
 
-             if (asserter->operatorsStack.top() != Asserter::Operator::Equal) {
-                 std::cout << "Top of operators Stack wasn't equals sign, it was: " << asserter->operatorsStack.top() << std::endl;
-                 return;
-             }
+                if (asserter->operatorsStack.top() != Asserter::Operator::Equal) {
+                    logsStream << "Top of operators Stack wasn't equals sign, it was: " << asserter->operatorsStack.
+                            top()
+                            << std::endl;
+                    return;
+                }
 
-             asserter->operatorsStack.pop();
+                asserter->operatorsStack.pop();
 
-             auto type1 = asserter->typesStack.top();
-             asserter->typesStack.pop();
-             auto type2 = asserter->typesStack.top();
-             asserter->typesStack.pop();
+                auto type1 = asserter->typesStack.top();
+                asserter->typesStack.pop();
+                auto type2 = asserter->typesStack.top();
+                asserter->typesStack.pop();
 
-             if (type1 == type2)
-                 std::cout << "Asigned!" << std::endl;
-             else
-                 std::cout << "Error: Types " << type1 << " and " << type2 << " aren't equal!" << std::endl;
+                if (type1 == type2)
+                    logsStream << "Asigned!" << std::endl;
+                else
+                    logsStream << "Error: Types " << type1 << " and " << type2 << " aren't equal!" << std::endl;
 
-             if (!asserter->typesStack.empty())
-                 std::cout << "Assert failed: typesStack is not empty! it has " << asserter->typesStack.size() << " items, top: " << asserter->typesStack.top() << std::endl;
-             if (!asserter->operatorsStack.empty())
-                 std::cout << "Assert failed: operatorsStack is not empty! it has " << asserter->operatorsStack.size() << " items, top: " << asserter->operatorsStack.top() << std::endl;
+                if (!asserter->typesStack.empty())
+                    logsStream << "Assert failed: typesStack is not empty! it has " << asserter->typesStack.size() <<
+                            " items, top: " << asserter->typesStack.top() << std::endl;
+                if (!asserter->operatorsStack.empty())
+                    logsStream << "Assert failed: operatorsStack is not empty! it has " << asserter->operatorsStack.
+                            size() << " items, top: " << asserter->operatorsStack.top() << std::endl;
             }
         }
     };
 
     std::vector<ProductionAction> afterStateActions = {
-        {{2005}, [&](Token &t) {
-                std::cout << "Trying to apply Mul/Div operator. optop: " << asserter->operatorsStack.top() << " opstack size: " << asserter->operatorsStack.size() << " tystack size: " << asserter->typesStack.size() << std::endl;
+        {
+            {2005}, [&](Token &t) {
+                logsStream << "Trying to apply Mul/Div operator. optop: " << asserter->operatorsStack.top() <<
+                        " opstack size: " << asserter->operatorsStack.size() << " tystack size: " << asserter->
+                        typesStack.size() << std::endl;
                 std::vector<Asserter::Operator> expectedOperators = {
                     Asserter::Operator::Mul,
                     Asserter::Operator::Div,
                 };
 
-                while (std::find(expectedOperators.cbegin(), expectedOperators.cend(), asserter->operatorsStack.top()) != expectedOperators.cend()) {
+                while (std::find(expectedOperators.cbegin(), expectedOperators.cend(), asserter->operatorsStack.top())
+                       != expectedOperators.cend()) {
                     auto operand1 = asserter->typesStack.top();
                     asserter->typesStack.pop();
                     auto operand2 = asserter->typesStack.top();
                     asserter->typesStack.pop();
 
                     auto op = asserter->operatorsStack.top();
-                    std::cout << "Applying " << operand1 << ", " << operand2 << " with operator: " << op << std::endl;
+                    logsStream << "Applying " << operand1 << ", " << operand2 << " with operator: " << op << std::endl;
                     asserter->operatorsStack.pop();
                     auto result = asserter->applyOperator(operand1, operand2, op);
                     if (result == Asserter::Type::Error) {
-                        std::cout << "Error: incompatible types (" << operand1 << " ," << operand2 << ") with operator: " << op << std::endl;
-                        std::cout << "Patching with Real brutal in here..." << std::endl;
+                        logsStream << "Error: incompatible types (" << operand1 << " ," << operand2 <<
+                                ") with operator: " << op << std::endl;
+                        logsStream << "Patching with Real brutal in here..." << std::endl;
 
                         asserter->typesStack.emplace(Asserter::Type::Float);
                         return;
@@ -179,14 +209,18 @@ public:
                 }
             }
         },
-        {{2006}, [&](Token &t) {
-                std::cout << "Trying to apply Add/Diff operator. optop: " << asserter->operatorsStack.top() << " opstack size: " << asserter->operatorsStack.size() << " tystack size: " << asserter->typesStack.size() << std::endl;
+        {
+            {2006}, [&](Token &t) {
+                logsStream << "Trying to apply Add/Diff operator. optop: " << asserter->operatorsStack.top() <<
+                        " opstack size: " << asserter->operatorsStack.size() << " tystack size: " << asserter->
+                        typesStack.size() << std::endl;
                 std::vector<Asserter::Operator> expectedOperators = {
                     Asserter::Operator::Add,
                     Asserter::Operator::Dif,
                 };
 
-                while (std::find(expectedOperators.cbegin(), expectedOperators.cend(), asserter->operatorsStack.top()) != expectedOperators.cend()) {
+                while (std::find(expectedOperators.cbegin(), expectedOperators.cend(), asserter->operatorsStack.top())
+                       != expectedOperators.cend()) {
                     auto operand1 = asserter->typesStack.top();
                     asserter->typesStack.pop();
                     auto operand2 = asserter->typesStack.top();
@@ -194,11 +228,12 @@ public:
 
                     auto op = asserter->operatorsStack.top();
                     asserter->operatorsStack.pop();
-                    std::cout << "Applying " << operand1 << ", " << operand2 << " with operator: " << op << std::endl;
+                    logsStream << "Applying " << operand1 << ", " << operand2 << " with operator: " << op << std::endl;
                     auto result = asserter->applyOperator(operand1, operand2, op);
                     if (result == Asserter::Type::Error) {
-                        std::cout << "Error: incompatible types (" << operand1 << " ," << operand2 << ") with operator: " << op << std::endl;
-                        std::cout << "Patching with Real brutal in here..." << std::endl;
+                        logsStream << "Error: incompatible types (" << operand1 << " ," << operand2 <<
+                                ") with operator: " << op << std::endl;
+                        logsStream << "Patching with Real brutal in here..." << std::endl;
 
                         asserter->typesStack.emplace(Asserter::Type::Float);
                         return;
@@ -209,7 +244,7 @@ public:
         },
     };
 
-    static std::map<int, std::vector<int>> expectedTokens;
+    static std::map<int, std::vector<int> > expectedTokens;
 
 private:
     const std::map<int, int> stateToRow = {
@@ -494,103 +529,103 @@ private:
         },
     };
 
-    std::vector<std::vector<int>> matrizProducciones = {
-        { 3, 2, 7 },
-        { 5, 2 },
-        { 4, 2 },
-        { 10, 2 },
-        { -100 },
-        { 1000, 101, 134, 1001, 123, 3 },
-        { -100 },
-        { 1022, 101, 109, 9, 123, 4 },
-        { -100 },
-        { 1021, 101, 2001, 6, 1023, 8, 2002, 123, 5 },
-        { -100 },
-        { 124, 101, 2001, 6 },
-        { -100 },
-        { 1003, 2000, 13, 1004 },
-        { 1005 },
-        { 1006 },
-        { 1007 },
-        { 1008 },
-        { 1009 },
-        { 1010 },
-        { 102 },
-        { 103 },
-        { 104 },
-        { 125 },
-        { 126 },
-        { 1027, 101, 109, 8, 119, 11, 120, 5, 13, 1028, 10 },
-        { -100 },
-        { 101, 6, 109, 8, 12 },
-        { -100 },
-        { 124, 11 },
-        { -100 },
-        { 101, 2003, 14 },
-        { 28, 123, 13 },
-        { 16, 123, 13 },
-        { 19, 123, 13 },
-        { 20, 123, 13 },
-        { 23, 13 },
-        { 26, 13 },
-        { 22, 13 },
-        { 27, 13 },
-        { -100 },
-        { 15, 123, 2010, 13 },
-        { 21, 123, 13 },
-        { 109, 2004, 29 },
-        { 1020, 119, 17, 120 },
-        { 29, 18 },
-        { 124, 17 },
-        { -100 },
-        { 1019, 119, 101, 6, 120 },
-        { 129, 101 },
-        { 130, 101 },
-        { 129 },
-        { 130 },
-        { 1015, 13, 1024, 119, 29, 120, 1016 },
-        { 1011, 119, 29, 120, 13, 24, 25, 1014 },
-        { 1012, 119, 29, 120, 13, 24 },
-        { -100 },
-        { 1013, 13 },
-        { -100 },
-        { 1017, 119, 29, 120, 13, 1018 },
-        { 1025, 101, 119, 29, 1030, 29, 120, 13, 1026 },
-        { 1029, 29 },
-        { 31, 30 },
-        { 118, 29 },
-        { -100 },
-        { 33, 32 },
-        { 117, 31 },
-        { -100 },
-        { 34 },
-        { 116, 34 },
-        { 37, 35 },
-        { 36, 37 },
-        { -100 },
-        { 110 },
-        { 115 },
-        { 111 },
-        { 112 },
-        { 113 },
-        { 114 },
-        { 39, 2006, 38 },
-        { 105, 2007, 37 },
-        { 106, 2007, 37 },
-        { -100 },
-        { 41, 2005, 40 },
-        { 107, 2007, 39 },
-        { 108, 2007, 39 },
-        { 128, 39 },
-        { 133, 39 },
-        { -100 },
-        { 101, 2003, 42 },
-        { 9, 2003 },
-        { 119, 2008, 29, 120, 2009 },
-        { 119, 43, 120 },
-        { -100 },
-        { 101, 6 },
-        { -100 },
+    std::vector<std::vector<int> > matrizProducciones = {
+        {3, 2, 7},
+        {5, 2},
+        {4, 2},
+        {10, 2},
+        {-100},
+        {1000, 101, 134, 1001, 123, 3},
+        {-100},
+        {1022, 101, 109, 9, 123, 4},
+        {-100},
+        {1021, 101, 2001, 6, 1023, 8, 2002, 123, 5},
+        {-100},
+        {124, 101, 2001, 6},
+        {-100},
+        {1003, 2000, 13, 1004},
+        {1005},
+        {1006},
+        {1007},
+        {1008},
+        {1009},
+        {1010},
+        {102},
+        {103},
+        {104},
+        {125},
+        {126},
+        {1027, 101, 109, 8, 119, 11, 120, 5, 13, 1028, 10},
+        {-100},
+        {101, 6, 109, 8, 12},
+        {-100},
+        {124, 11},
+        {-100},
+        {101, 2003, 14},
+        {28, 123, 13},
+        {16, 123, 13},
+        {19, 123, 13},
+        {20, 123, 13},
+        {23, 13},
+        {26, 13},
+        {22, 13},
+        {27, 13},
+        {-100},
+        {15, 123, 2010, 13},
+        {21, 123, 13},
+        {109, 2004, 29},
+        {1020, 119, 17, 120},
+        {29, 18},
+        {124, 17},
+        {-100},
+        {1019, 119, 101, 6, 120},
+        {129, 101},
+        {130, 101},
+        {129},
+        {130},
+        {1015, 13, 1024, 119, 29, 120, 1016},
+        {1011, 119, 29, 120, 13, 24, 25, 1014},
+        {1012, 119, 29, 120, 13, 24},
+        {-100},
+        {1013, 13},
+        {-100},
+        {1017, 119, 29, 120, 13, 1018},
+        {1025, 101, 119, 29, 1030, 29, 120, 13, 1026},
+        {1029, 29},
+        {31, 30},
+        {118, 29},
+        {-100},
+        {33, 32},
+        {117, 31},
+        {-100},
+        {34},
+        {116, 34},
+        {37, 35},
+        {36, 37},
+        {-100},
+        {110},
+        {115},
+        {111},
+        {112},
+        {113},
+        {114},
+        {39, 2006, 38},
+        {105, 2007, 37},
+        {106, 2007, 37},
+        {-100},
+        {41, 2005, 40},
+        {107, 2007, 39},
+        {108, 2007, 39},
+        {128, 39},
+        {133, 39},
+        {-100},
+        {101, 2003, 42},
+        {9, 2003},
+        {119, 2008, 29, 120, 2009},
+        {119, 43, 120},
+        {-100},
+        {101, 6},
+        {-100},
     };
 };
 

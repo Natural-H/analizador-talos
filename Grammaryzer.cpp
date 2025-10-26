@@ -1,7 +1,5 @@
 #include "Grammaryzer.h"
 
-#include <sstream>
-
 #include "Utils.h"
 
 Grammaryzer::Grammaryzer()
@@ -16,12 +14,14 @@ Grammaryzer::~Grammaryzer()
     delete asserter;
 }
 
-std::string Grammaryzer::checkGrammar() const
+std::string Grammaryzer::checkGrammar()
 {
     std::stack<int> stack;
     stack.emplace(499); // Push EOF token
     stack.emplace(1); // Push initial state
     Token currentToken = tokenizer->findNextToken();
+
+    cleanLogs();
 
     asserter->variablesTypes.clear();
 
@@ -88,7 +88,7 @@ std::string Grammaryzer::checkGrammar() const
                     return std::find(action.triggers.cbegin(), action.triggers.cend(), stack.top()) != action.triggers.cend();
                 });
 
-                for_each(filtered.begin(), filtered.end(), [&](ProductionAction action) {
+                for_each(filtered.begin(), filtered.end(), [&](const ProductionAction& action) {
                     action.action(currentToken);
                 });
 
@@ -143,6 +143,11 @@ std::string Grammaryzer::checkGrammar() const
     while (currentToken.state != 499 || !stack.empty());
 
     return "Welp, something broke really bad"; // this shouldn't be reachable, and I would be really scared if it is
+}
+
+void Grammaryzer::cleanLogs() {
+    logsStream.str("");
+    logsStream.clear();
 }
 
 std::map<int, std::vector<int>> Grammaryzer::expectedTokens = {

@@ -11,9 +11,9 @@
 
 #include "Token.h"
 
-class Tokenizer : public QObject
-{
+class Tokenizer : public QObject {
     Q_OBJECT
+
 public:
     // static void analyze(const QString& qString, std::vector<Token>& tokens);
     static std::map<int, std::string> tokenMap;
@@ -22,23 +22,25 @@ public:
     static int transitionTable[26][33];
 
     void setText(std::string text);
+
     std::string getText();
 
 signals:
-    void tokenFound(const Token& token);
+    void tokenFound(const Token &token);
 
 public slots:
     Token findNextToken();
 
 private:
-    static bool canContinue(int state, char** c, const char* end);
+    static bool canContinue(int state, char **c, const char *end);
+
     static int got(char c);
 
     std::string text;
-    char* leftOff = nullptr;
+    char *leftOff = nullptr;
+
 public:
-    enum States
-    {
+    enum States {
         palabraReservada = 100,
         identificador = 101,
         entero = 102,

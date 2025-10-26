@@ -243,6 +243,13 @@
            </column>
           </widget>
          </item>
+         <item>
+          <widget class="QPushButton" name="showLogsButton">
+           <property name="text">
+            <string>Mostrar Logs</string>
+           </property>
+          </widget>
+         </item>
         </layout>
        </widget>
        <widget class="QWidget" name="verticalLayoutWidget_3">

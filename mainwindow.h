@@ -14,6 +14,8 @@
 #include "Tokenizer.h"
 #include "Grammaryzer.h"
 #include "Highlighter.h"
+#include "logswindow.h"
+#include "ui_logswindow.h"
 
 namespace ui
 {
@@ -39,6 +41,7 @@ namespace ui
 
     private:
         Ui::MainWindow* ui;
+        logswindow* loggerWindow;
         QFile file;
         QString filename;
         bool isFileSaved = false;

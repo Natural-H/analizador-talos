@@ -1,0 +1,8 @@
+def id1, id2, id3 of int;
+def id1, id4, if5 of char;
+def id6, id7 of float;
+
+class
+	id1 = id4 + id5 * (id2 + id3);
+	id6 = id7 / id2 - id8;
+endclass

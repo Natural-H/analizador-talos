@@ -119,7 +119,7 @@ public:
                     logsStream << "Error: item " << t.content << " not found!" << std::endl;
                     asserter->errors.emplace_back(
                         "Error (L: " + std::to_string(t.line + 1) + "): item " + t.content + " not found!");
-                    logsStream << "Time to brutally patch this adding " << t.content << " as Float" << std::endl;
+                    logsStream << "Time to brutally patch this by adding " << t.content << " as Float" << std::endl;
 
                     asserter->variablesTypes[t.content] = Asserter::Type::Float;
                     asserter->typesStack.emplace_back(Asserter::Type::Float);
@@ -177,8 +177,8 @@ public:
 
                 asserter->operatorsStack.pop();
 
-                const auto &type1 = asserter->typesStack.pop();
                 const auto &type2 = asserter->typesStack.pop();
+                const auto &type1 = asserter->typesStack.pop();
 
                 if (type1 == type2)
                     logsStream << "Assigned!" << std::endl;
@@ -186,8 +186,8 @@ public:
                     logsStream << "Error: Types [" << asserter->typeToString[type1] << "] and ["
                             << asserter->typeToString[type2] << "] aren't equal!" << std::endl;
                     asserter->errors.emplace_back(
-                        "Error (L: " + std::to_string(t.line + 1) + "): Types [" + asserter->typeToString[type1] + "] and ["
-                        + asserter->typeToString[type2] + "] aren't equal!");
+                        "Error (L: " + std::to_string(t.line + 1) + "): Types [" + asserter->typeToString[type1] +
+                        "] and [" + asserter->typeToString[type2] + "] aren't equal!");
                 }
 
 
@@ -222,8 +222,8 @@ public:
 
                 while (std::find(expectedOperators.cbegin(), expectedOperators.cend(), asserter->operatorsStack.top())
                        != expectedOperators.cend()) {
-                    const auto &operand1 = asserter->typesStack.pop();
                     const auto &operand2 = asserter->typesStack.pop();
+                    const auto &operand1 = asserter->typesStack.pop();
 
                     const auto &op = asserter->operatorsStack.pop();
 
@@ -231,12 +231,15 @@ public:
                         operand2] << " with operator: " << asserter->operatorToString[op] << std::endl;
                     const auto &result = asserter->applyOperator(operand1, operand2, op);
                     if (result == Asserter::Type::Error) {
-                        logsStream << "Error: incompatible types (" << asserter->typeToString[operand1] << " ," <<
-                                asserter->typeToString[operand2] <<
-                                ") with operator: " << asserter->operatorToString[op] << std::endl;
+                        logsStream << "Error: incompatible types, cannot do [" << asserter->typeToString[operand1] <<
+                                " " << asserter->operatorToString[op] << " " << asserter->typeToString[operand2] << "]"
+                                << std::endl;
+
                         asserter->errors.emplace_back(
-                            "Error (L: " + std::to_string(t.line + 1) + "): incompatible types (" + asserter->typeToString[operand1] + " ," + asserter->
-                            typeToString[operand2] + ") with operator: " + asserter->operatorToString[op]);
+                            "Error (L: " + std::to_string(t.line + 1) + "): incompatible types, cannot do [" + asserter
+                            ->typeToString[operand1] + " " + asserter->operatorToString[op] + " " + asserter->
+                            typeToString[operand2] + "]");
+
                         logsStream << "Patching with Float in here..." << std::endl;
 
                         asserter->typesStack.emplace_back(Asserter::Type::Float);
@@ -263,8 +266,8 @@ public:
 
                 while (std::find(expectedOperators.cbegin(), expectedOperators.cend(), asserter->operatorsStack.top())
                        != expectedOperators.cend()) {
-                    const auto &operand1 = asserter->typesStack.pop();
                     const auto &operand2 = asserter->typesStack.pop();
+                    const auto &operand1 = asserter->typesStack.pop();
 
                     const auto &op = asserter->operatorsStack.pop();
 
@@ -272,12 +275,15 @@ public:
                         operand2] << " with operator: " << asserter->operatorToString[op] << std::endl;
                     const auto &result = asserter->applyOperator(operand1, operand2, op);
                     if (result == Asserter::Type::Error) {
-                        logsStream << "Error: incompatible types (" << asserter->typeToString[operand1] << " ," <<
-                                asserter->typeToString[operand2] <<
-                                ") with operator: " << asserter->operatorToString[op] << std::endl;
+                        logsStream << "Error: incompatible types, cannot do [" << asserter->typeToString[operand1] <<
+                                " " << asserter->operatorToString[op] << " " << asserter->typeToString[operand2] << "]"
+                                << std::endl;
+
                         asserter->errors.emplace_back(
-                            "Error (L: " + std::to_string(t.line + 1) + "): incompatible types (" + asserter->typeToString[operand1] + " ," + asserter->
-                            typeToString[operand2] + ") with operator: " + asserter->operatorToString[op]);
+                            "Error (L: " + std::to_string(t.line + 1) + "): incompatible types, cannot do [" + asserter
+                            ->typeToString[operand1] + " " + asserter->operatorToString[op] + " " + asserter->
+                            typeToString[operand2] + "]");
+
                         logsStream << "Patching with Float in here..." << std::endl;
 
                         asserter->typesStack.emplace_back(Asserter::Type::Float);

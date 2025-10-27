@@ -47,11 +47,11 @@ public:
     };
 
     std::map<Operator, std::string> operatorToString = {
-        {Add, "Add"},
-        {Dif, "Dif"},
-        {Mul, "Mul"},
-        {Div, "Div"},
-        {Equal, "Equal"},
+        {Add, "+"},
+        {Dif, "-"},
+        {Mul, "*"},
+        {Div, "/"},
+        {Equal, "="},
         {Mff, "Mff"},
     };
 

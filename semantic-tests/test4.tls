@@ -1,0 +1,8 @@
+def Aa, Bb, Cc of float;
+def Cc, Dd of int;
+def Ee, Ff of char;
+
+class
+	Xx = Aa - Dd / Cc;
+	Ff = Ee / Dd * Cc - (Bb + Aa);
+endclass

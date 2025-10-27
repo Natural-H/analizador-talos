@@ -1,0 +1,9 @@
+def a, b, c, d of int;
+def d, e, f, g of float;
+def h, i of char;
+
+class
+	a = b - c * (d + e * f);
+	e = (a + b) / (h - w);
+	w = d * f * g + d - (h + 1);
+endclass

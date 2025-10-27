@@ -1,10 +1,8 @@
 #include "asserter.h"
 
-Asserter::Asserter() {
+Asserter::Asserter() = default;
 
-}
-
-Asserter::Type Asserter::applyOperator(Type first, Type second, Operator op) {
+Asserter::Type Asserter::applyOperator(const Type first, const Type second, const Operator op) const {
     if (first >= Void || second >= Void)
         return Error;
 
@@ -13,5 +11,3 @@ Asserter::Type Asserter::applyOperator(Type first, Type second, Operator op) {
 
     return operatorsTable[first][op][second];
 }
-
-

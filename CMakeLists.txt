@@ -31,6 +31,8 @@ add_executable(AnalizadorTalos main.cpp
         logswindow.cpp
         logswindow.h
         logswindow.ui
+        GrammarResult.h
+        GrammarResult.cpp
 )
 target_link_libraries(AnalizadorTalos
         Qt::Core

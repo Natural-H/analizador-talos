@@ -3,10 +3,9 @@
 
 #include <string>
 #include <map>
-#include <stack>
+#include <QStack>
 
-class Asserter
-{
+class Asserter {
 public:
     Asserter();
 
@@ -18,7 +17,7 @@ public:
         Bool,
         Void,
         Error,
-        Unasigned
+        Unassigned,
     };
 
     enum Operator {
@@ -32,38 +31,64 @@ public:
 
     std::map<std::string, Type> variablesTypes;
 
-    std::stack<Type> typesStack;
-    std::stack<Operator> operatorsStack;
+    QStack<Type> typesStack;
+    QStack<Operator> operatorsStack;
+    std::vector<std::string> errors;
 
-    Type applyOperator(Type, Type, Operator);
+    std::map<Type, std::string> typeToString = {
+        {Int, "Int"},
+        {Float, "Float"},
+        {Char, "Char"},
+        {String, "String"},
+        {Bool, "Bool"},
+        {Void, "Void"},
+        {Error, "Error"},
+        {Unassigned, "Unassigned"},
+    };
+
+    std::map<Operator, std::string> operatorToString = {
+        {Add, "Add"},
+        {Dif, "Dif"},
+        {Mul, "Mul"},
+        {Div, "Div"},
+        {Equal, "Equal"},
+        {Mff, "Mff"},
+    };
+
+    [[nodiscard]] Type applyOperator(Type, Type, Operator) const;
 
     Type operatorsTable[5][4][5] = {
-        {   // Int allowed operators
-            //int float  char   string bool
+        {
+            // Int allowed operators
+            //  int  float  char   string bool
             {Int, Float, Error, Error, Error}, // add
             {Int, Float, Error, Error, Error}, // diff
             {Int, Float, Error, Error, Error}, // mult
-            {Int, Float, Error, Error, Error},  // div
+            {Int, Float, Error, Error, Error}, // div
         },
-        {   // Float allowed operators
+        {
+            // Float allowed operators
             {Float, Float, Error, Error, Error},
             {Float, Float, Error, Error, Error},
             {Float, Float, Error, Error, Error},
             {Float, Float, Error, Error, Error}
         },
-        {   // Char allowed operators
+        {
+            // Char allowed operators
             {Error, Error, Error, Error, Error},
             {Error, Error, Error, Error, Error},
             {Error, Error, Error, Error, Error},
             {Error, Error, Error, Error, Error}
         },
-        {   // String allowed operators
+        {
+            // String allowed operators
             {Error, Error, Error, Error, Error},
             {Error, Error, Error, Error, Error},
             {Error, Error, Error, Error, Error},
             {Error, Error, Error, Error, Error}
         },
-        {   // Bool allowed operators
+        {
+            // Bool allowed operators
             {Error, Error, Error, Error, Error},
             {Error, Error, Error, Error, Error},
             {Error, Error, Error, Error, Error},

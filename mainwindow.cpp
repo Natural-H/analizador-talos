@@ -3,6 +3,7 @@
 #include "Grammaryzer.h"
 #include "logswindow.h"
 #include "ui_MainWindow.h"
+#include "ui_MainWindow.h"
 
 namespace ui {
     MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
@@ -198,13 +199,23 @@ namespace ui {
 
         grammaryzer->tokenizer->setText(ui->sourcePanel->toPlainText().toStdString());
         ui->tableGrammarResults->insertRow(ui->tableGrammarResults->rowCount());
-        const auto results = new QTableWidgetItem(grammaryzer->checkGrammar().data());
+        const auto [grammarResult, semanticErrors] = grammaryzer->checkGrammar();
+
+        const auto result = new QTableWidgetItem(grammarResult.data());
+        result->setTextAlignment(Qt::AlignTop | Qt::AlignLeft);
+        ui->tableGrammarResults->setItem(ui->tableGrammarResults->rowCount() - 1, 0, result);
 
         emit grammaryzer->newLogs(grammaryzer->logsStream);
 
-        results->setTextAlignment(Qt::AlignTop | Qt::AlignLeft);
+        std::for_each(semanticErrors.cbegin(), semanticErrors.cend(), [&](const auto &item) {
+            const auto error = new QTableWidgetItem(item.data());
+            error->setTextAlignment(Qt::AlignTop | Qt::AlignLeft);
 
-        ui->tableGrammarResults->setItem(ui->tableGrammarResults->rowCount() - 1, 0, results);
+            ui->tableGrammarResults->insertRow(ui->tableGrammarResults->rowCount());
+            ui->tableGrammarResults->setItem(ui->tableGrammarResults->rowCount() - 1, 0, error);
+        });
+
+        ui->tableGrammarResults->resizeRowsToContents();
 
         if (!ui->checkBoxAuto->isChecked())
             highlighter->rehighlight();

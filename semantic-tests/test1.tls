@@ -1,0 +1,8 @@
+def a, b, c, d of int;
+def d, e, f, g of float;
+def h, i, j of string;
+
+class
+	a = b + x * d - c / b;
+	i = h + i * (f + g) / j;
+endclass

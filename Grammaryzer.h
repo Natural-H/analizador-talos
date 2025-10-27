@@ -7,6 +7,7 @@
 
 #include "Tokenizer.h"
 #include "Token.h"
+#include "grammarResult.h"
 
 #include <algorithm>
 #include <iostream>
@@ -21,18 +22,23 @@ struct ProductionAction {
     std::function<void(Token &)> action;
 };
 
+struct GrammarResults {
+    std::string grammarResult;
+    std::vector<std::string> semanticErrors;
+};
+
 class Grammaryzer : public QObject {
     Q_OBJECT
 
 signals:
-    void newLogs(const std::ostringstream& oss);
+    void newLogs(const std::ostringstream &oss);
 
 public:
     Grammaryzer();
 
     ~Grammaryzer() override;
 
-    std::string checkGrammar();
+    GrammarResults checkGrammar();
 
     Tokenizer *tokenizer;
     Asserter *asserter;
@@ -41,35 +47,40 @@ public:
 
     void cleanLogs();
 
+    void printTypesStack();
+
+    void printOperatorsStack();
+
+    void printTypesTable();
+
     std::vector<ProductionAction> onTopActions = {
         {
             {2000}, [&](Token &t) {
                 // for debug purposes only
-                logsStream << "types table: " << std::endl;
-                std::for_each(asserter->variablesTypes.cbegin(), asserter->variablesTypes.cend(),
-                              [&](const auto &item) {
-                                  logsStream << item.first << " | " << item.second << std::endl;
-                              });
+                printTypesTable();
             }
         },
         {
             {2001}, [&](Token &t) {
-                logsStream << "Got: " << t.content << std::endl;
+                logsStream << "Got declaration for: " << t.content << std::endl;
 
                 if (asserter->variablesTypes.find(t.content) != asserter->variablesTypes.end()) {
-                    logsStream << "Error: " << t.content << " already in here." << std::endl;
+                    logsStream << "Error: " + t.content + " already in here." << std::endl;
+                    asserter->errors.emplace_back(
+                        "Error (L: " + std::to_string(t.line + 1) + "): " + t.content + " already in here.");
                     return;
                 }
 
-                asserter->variablesTypes.insert({t.content, Asserter::Type::Unasigned});
+                asserter->variablesTypes.insert({t.content, Asserter::Type::Unassigned});
             }
         },
         {
             {2002}, [&](Token &t) {
-                logsStream << "Got Type: " << t.content << std::endl;
+                auto type = static_cast<Asserter::Type>(t.state - 1005);
+                logsStream << "Got Type: " << asserter->typeToString[type] << std::endl;
                 std::for_each(asserter->variablesTypes.begin(), asserter->variablesTypes.end(), [&](auto &item) {
-                    if (item.second == Asserter::Type::Unasigned)
-                        item.second = static_cast<Asserter::Type>(t.state - 1005);
+                    if (item.second == Asserter::Type::Unassigned)
+                        item.second = type;
                 });
             }
         },
@@ -94,52 +105,61 @@ public:
                             state = Asserter::Type::String;
                         case Tokenizer::States::constanteCaracter:
                             state = Asserter::Type::Char;
-                        default: ;
+                        default:
+                            state = Asserter::Type::Unassigned;
                     }
 
-                    asserter->typesStack.emplace(state);
+                    asserter->typesStack.emplace_back(state);
+                    printTypesStack();
                     return;
                 }
 
                 const auto item = asserter->variablesTypes.find(t.content);
                 if (item == asserter->variablesTypes.end()) {
                     logsStream << "Error: item " << t.content << " not found!" << std::endl;
-                    logsStream << "Time to brutally patch this adding " << t.content << " as Real" << std::endl;
+                    asserter->errors.emplace_back(
+                        "Error (L: " + std::to_string(t.line + 1) + "): item " + t.content + " not found!");
+                    logsStream << "Time to brutally patch this adding " << t.content << " as Float" << std::endl;
 
                     asserter->variablesTypes[t.content] = Asserter::Type::Float;
-                    asserter->typesStack.emplace(Asserter::Type::Float);
+                    asserter->typesStack.emplace_back(Asserter::Type::Float);
+                    printTypesTable();
                     return;
                 }
 
-                asserter->typesStack.emplace(item->second);
-                logsStream << "typesStack top: " << asserter->typesStack.top() << std::endl;
+                asserter->typesStack.emplace_back(item->second);
+                printTypesStack();
             }
         },
         {
             {2004}, [&](const Token &t) {
                 logsStream << "Got equal sign: " << t.content << std::endl;
 
-                asserter->operatorsStack.emplace(Asserter::Operator::Equal);
+                asserter->operatorsStack.emplace_back(Asserter::Operator::Equal);
+                printOperatorsStack();
             }
         },
         {
             {2007}, [&](Token &t) {
                 logsStream << "Got item: " << t.content << " added to operatorsStack" << std::endl;
-                asserter->operatorsStack.emplace(static_cast<Asserter::Operator>(t.state - 105));
-                logsStream << "opStack top: " << asserter->operatorsStack.top() << std::endl;
+                asserter->operatorsStack.emplace_back(static_cast<Asserter::Operator>(t.state - 105));
+                // logsStream << "opStack top: " << asserter->operatorsStack.top() << std::endl;
+                printOperatorsStack();
             }
         },
         {
             {2008}, [&](Token &t) {
                 logsStream << "Got item: " << t.content << " added MFF to operatorsStack" << std::endl;
-                asserter->operatorsStack.emplace(Asserter::Operator::Mff);
+                asserter->operatorsStack.emplace_back(Asserter::Operator::Mff);
+                printOperatorsStack();
             }
         },
         {
             {2009}, [&](Token &t) {
                 logsStream << "Got item: " << t.content << " removed MFF from operatorsStack" << std::endl;
                 asserter->operatorsStack.pop();
-                logsStream << "Current top: " << asserter->operatorsStack.top() << std::endl;
+                // logsStream << "Current top: " << asserter->operatorsStack.top() << std::endl;
+                printOperatorsStack();
             }
         },
         {
@@ -147,30 +167,42 @@ public:
                 logsStream << "Got item: " << t.content << " time to check the operation" << std::endl;
 
                 if (asserter->operatorsStack.top() != Asserter::Operator::Equal) {
-                    logsStream << "Top of operators Stack wasn't equals sign, it was: " << asserter->operatorsStack.
-                            top()
-                            << std::endl;
+                    logsStream << "Top of operators Stack wasn't equals sign, it was: " << asserter->operatorToString[
+                        asserter->operatorsStack.top()] << std::endl;
+                    asserter->errors.emplace_back(
+                        "Top of operators Stack wasn't equals sign, it was: " + asserter->operatorToString[
+                            asserter->operatorsStack.top()]);
                     return;
                 }
 
                 asserter->operatorsStack.pop();
 
-                auto type1 = asserter->typesStack.top();
-                asserter->typesStack.pop();
-                auto type2 = asserter->typesStack.top();
-                asserter->typesStack.pop();
+                const auto &type1 = asserter->typesStack.pop();
+                const auto &type2 = asserter->typesStack.pop();
 
                 if (type1 == type2)
-                    logsStream << "Asigned!" << std::endl;
-                else
-                    logsStream << "Error: Types " << type1 << " and " << type2 << " aren't equal!" << std::endl;
+                    logsStream << "Assigned!" << std::endl;
+                else {
+                    logsStream << "Error: Types [" << asserter->typeToString[type1] << "] and ["
+                            << asserter->typeToString[type2] << "] aren't equal!" << std::endl;
+                    asserter->errors.emplace_back(
+                        "Error (L: " + std::to_string(t.line + 1) + "): Types [" + asserter->typeToString[type1] + "] and ["
+                        + asserter->typeToString[type2] + "] aren't equal!");
+                }
 
-                if (!asserter->typesStack.empty())
-                    logsStream << "Assert failed: typesStack is not empty! it has " << asserter->typesStack.size() <<
-                            " items, top: " << asserter->typesStack.top() << std::endl;
-                if (!asserter->operatorsStack.empty())
-                    logsStream << "Assert failed: operatorsStack is not empty! it has " << asserter->operatorsStack.
+
+                if (!asserter->typesStack.empty()) {
+                    logsStream << "FATAL: typesStack is not empty! it has " << asserter->typesStack.size() <<
+                            " items" << std::endl;
+                    asserter->errors.emplace_back("FATAL: typesStack is not empty! Check Logs");
+                    printTypesStack();
+                }
+                if (!asserter->operatorsStack.empty()) {
+                    logsStream << "FATAL: operatorsStack is not empty! it has " << asserter->operatorsStack.
                             size() << " items, top: " << asserter->operatorsStack.top() << std::endl;
+                    asserter->errors.emplace_back("FATAL: operatorsStack is not empty! Check Logs");
+                    printOperatorsStack();
+                }
             }
         }
     };
@@ -178,73 +210,88 @@ public:
     std::vector<ProductionAction> afterStateActions = {
         {
             {2005}, [&](Token &t) {
-                logsStream << "Trying to apply Mul/Div operator. optop: " << asserter->operatorsStack.top() <<
-                        " opstack size: " << asserter->operatorsStack.size() << " tystack size: " << asserter->
-                        typesStack.size() << std::endl;
-                std::vector<Asserter::Operator> expectedOperators = {
+                logsStream << "Trying to apply Mul/Div operator." << std::endl;
+
+                printTypesStack();
+                printOperatorsStack();
+
+                const std::vector expectedOperators = {
                     Asserter::Operator::Mul,
                     Asserter::Operator::Div,
                 };
 
                 while (std::find(expectedOperators.cbegin(), expectedOperators.cend(), asserter->operatorsStack.top())
                        != expectedOperators.cend()) {
-                    auto operand1 = asserter->typesStack.top();
-                    asserter->typesStack.pop();
-                    auto operand2 = asserter->typesStack.top();
-                    asserter->typesStack.pop();
+                    const auto &operand1 = asserter->typesStack.pop();
+                    const auto &operand2 = asserter->typesStack.pop();
 
-                    auto op = asserter->operatorsStack.top();
-                    logsStream << "Applying " << operand1 << ", " << operand2 << " with operator: " << op << std::endl;
-                    asserter->operatorsStack.pop();
-                    auto result = asserter->applyOperator(operand1, operand2, op);
+                    const auto &op = asserter->operatorsStack.pop();
+
+                    logsStream << "Applying " << asserter->typeToString[operand1] << ", " << asserter->typeToString[
+                        operand2] << " with operator: " << asserter->operatorToString[op] << std::endl;
+                    const auto &result = asserter->applyOperator(operand1, operand2, op);
                     if (result == Asserter::Type::Error) {
-                        logsStream << "Error: incompatible types (" << operand1 << " ," << operand2 <<
-                                ") with operator: " << op << std::endl;
-                        logsStream << "Patching with Real brutal in here..." << std::endl;
+                        logsStream << "Error: incompatible types (" << asserter->typeToString[operand1] << " ," <<
+                                asserter->typeToString[operand2] <<
+                                ") with operator: " << asserter->operatorToString[op] << std::endl;
+                        asserter->errors.emplace_back(
+                            "Error (L: " + std::to_string(t.line + 1) + "): incompatible types (" + asserter->typeToString[operand1] + " ," + asserter->
+                            typeToString[operand2] + ") with operator: " + asserter->operatorToString[op]);
+                        logsStream << "Patching with Float in here..." << std::endl;
 
-                        asserter->typesStack.emplace(Asserter::Type::Float);
+                        asserter->typesStack.emplace_back(Asserter::Type::Float);
+                        printTypesStack();
+                        printOperatorsStack();
                         return;
                     }
-                    asserter->typesStack.emplace(result);
+                    asserter->typesStack.emplace_back(result);
+                    printTypesStack();
+                    printOperatorsStack();
                 }
             }
         },
         {
             {2006}, [&](Token &t) {
-                logsStream << "Trying to apply Add/Diff operator. optop: " << asserter->operatorsStack.top() <<
-                        " opstack size: " << asserter->operatorsStack.size() << " tystack size: " << asserter->
-                        typesStack.size() << std::endl;
-                std::vector<Asserter::Operator> expectedOperators = {
+                logsStream << "Trying to apply Add/Diff operator." << std::endl;
+                printTypesStack();
+                printOperatorsStack();
+
+                const std::vector expectedOperators = {
                     Asserter::Operator::Add,
                     Asserter::Operator::Dif,
                 };
 
                 while (std::find(expectedOperators.cbegin(), expectedOperators.cend(), asserter->operatorsStack.top())
                        != expectedOperators.cend()) {
-                    auto operand1 = asserter->typesStack.top();
-                    asserter->typesStack.pop();
-                    auto operand2 = asserter->typesStack.top();
-                    asserter->typesStack.pop();
+                    const auto &operand1 = asserter->typesStack.pop();
+                    const auto &operand2 = asserter->typesStack.pop();
 
-                    auto op = asserter->operatorsStack.top();
-                    asserter->operatorsStack.pop();
-                    logsStream << "Applying " << operand1 << ", " << operand2 << " with operator: " << op << std::endl;
-                    auto result = asserter->applyOperator(operand1, operand2, op);
+                    const auto &op = asserter->operatorsStack.pop();
+
+                    logsStream << "Applying " << asserter->typeToString[operand1] << ", " << asserter->typeToString[
+                        operand2] << " with operator: " << asserter->operatorToString[op] << std::endl;
+                    const auto &result = asserter->applyOperator(operand1, operand2, op);
                     if (result == Asserter::Type::Error) {
-                        logsStream << "Error: incompatible types (" << operand1 << " ," << operand2 <<
-                                ") with operator: " << op << std::endl;
-                        logsStream << "Patching with Real brutal in here..." << std::endl;
+                        logsStream << "Error: incompatible types (" << asserter->typeToString[operand1] << " ," <<
+                                asserter->typeToString[operand2] <<
+                                ") with operator: " << asserter->operatorToString[op] << std::endl;
+                        asserter->errors.emplace_back(
+                            "Error (L: " + std::to_string(t.line + 1) + "): incompatible types (" + asserter->typeToString[operand1] + " ," + asserter->
+                            typeToString[operand2] + ") with operator: " + asserter->operatorToString[op]);
+                        logsStream << "Patching with Float in here..." << std::endl;
 
-                        asserter->typesStack.emplace(Asserter::Type::Float);
+                        asserter->typesStack.emplace_back(Asserter::Type::Float);
+                        printTypesStack();
+                        printOperatorsStack();
                         return;
                     }
-                    asserter->typesStack.emplace(result);
+                    asserter->typesStack.emplace_back(result);
+                    printTypesStack();
+                    printOperatorsStack();
                 }
             }
         },
     };
-
-    static std::map<int, std::vector<int> > expectedTokens;
 
 private:
     const std::map<int, int> stateToRow = {

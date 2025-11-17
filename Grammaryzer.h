@@ -15,6 +15,8 @@
 
 #include <functional>
 
+#include "asserter.h"
+
 struct ProductionAction {
     std::vector<int> triggers;
     std::function<void(Token &)> action;
@@ -208,6 +210,27 @@ public:
                     asserter->errors.emplace_back("FATAL: operatorsStack is not empty! Check Logs");
                     printOperatorsStack();
                 }
+            }
+        },
+        {
+            {3000}, [&](Token &t) {
+                logsStream << "Got an If statement, adding MFF" << std::endl;
+                asserter->operatorsStack.emplace_back(Asserter::Operator::Mff);
+                printOperatorsStack();
+            }
+        },
+        {
+            {3001}, [&](Token &t) {
+                logsStream << "Got endif keyword, trying to remove MFF" << std::endl;
+                const auto removed = asserter->operatorsStack.pop();
+
+                logsStream << "Removing: " << asserter->operatorToString[removed] << std::endl;
+
+                if (removed != Asserter::Operator::Mff) {
+                    asserter->errors.emplace_back("FATAL: Removed " + asserter->operatorToString[removed] + " instead of MFF!");
+                }
+
+                printOperatorsStack();
             }
         }
     };
@@ -669,7 +692,7 @@ private:
         {129},
         {130},
         {1015, 13, 1024, 119, 29, 120, 1016},
-        {1011, 119, 29, 120, 13, 24, 25, 1014},
+        {1011, 3000, 119, 29, 120, 13, 24, 25, 1014, 3001},
         {1012, 119, 29, 120, 13, 24},
         {-100},
         {1013, 13},

@@ -15,6 +15,8 @@ QuadsWindow::QuadsWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::Quad
     ui->setupUi(this);
 
     connect(ui->closeButton, &QPushButton::clicked, this, &QWidget::close);
+
+    ui->quadruplesTable->verticalHeader()->setVisible(false);
 }
 
 QuadsWindow::~QuadsWindow() {

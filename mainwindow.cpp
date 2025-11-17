@@ -208,7 +208,7 @@ namespace ui {
         ui->tableGrammarResults->insertRow(ui->tableGrammarResults->rowCount());
         const auto [grammarResult, semanticErrors] = grammaryzer->checkGrammar();
 
-        ui->showQuadsButton->setEnabled(!grammaryzer->asserter->hasErrors());
+        // ui->showQuadsButton->setEnabled(!grammaryzer->asserter->hasErrors());
 
         const auto result = new QTableWidgetItem(grammarResult.data());
         result->setTextAlignment(Qt::AlignTop | Qt::AlignLeft);

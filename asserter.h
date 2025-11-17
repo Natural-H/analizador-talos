@@ -87,25 +87,29 @@ public:
 
         SIQuadruple() = default;
 
-        SIQuadruple(const Operator op, const long long destiny) : Quadruple(op), destiny(destiny) {
+        explicit SIQuadruple(const long long destiny) : Quadruple(SI), destiny(destiny) {
         }
     };
 
-    struct SFQuadruple : SIQuadruple {
+    struct SFQuadruple : Quadruple {
+        long long destiny = 0;
         Variable condition;
 
         SFQuadruple() = default;
 
-        SFQuadruple(const Operator op, Variable condition, const long long destiny) : SIQuadruple(op, destiny),
+        SFQuadruple(Variable condition, const long long destiny) : Quadruple(SF), destiny(destiny),
             condition(std::move(condition)) {
         }
     };
 
-    struct SVQuadruple : SFQuadruple {
+    struct SVQuadruple : Quadruple {
+        long long destiny = 0;
+        Variable condition;
+
         SVQuadruple() = default;
 
-        SVQuadruple(const Operator op, const Variable &condition, const long long destiny) : SFQuadruple(
-            op, condition, destiny) {
+        SVQuadruple(Variable condition, const long long destiny) : Quadruple(SV), destiny(destiny),
+            condition(std::move(condition)) {
         }
     };
 
@@ -118,6 +122,7 @@ public:
 
     QStack<Variable> varStack;
     QStack<Operator> operatorsStack;
+    QStack<long long> jumpStack;
     std::vector<std::string> errors;
 
     [[nodiscard]] Type findType(const std::string &name) const;

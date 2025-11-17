@@ -16,9 +16,6 @@
 #include <functional>
 #include <stack>
 
-#include "asserter.h"
-#include "asserter.h"
-
 struct ProductionAction {
     std::vector<int> triggers;
     std::function<void(Token &)> action;
@@ -57,6 +54,8 @@ public:
     void printTypesStack();
 
     void printOperatorsStack();
+
+    void printJumpStack();
 
     void printTypesTable();
 
@@ -232,6 +231,39 @@ public:
         },
         {
             {3001}, [&](Token &t) {
+                logsStream << "Finished condition for If statement, adding SF without destiny" << std::endl;
+                asserter->jumpStack.emplace_back(asserter->quadruples.size());
+                printJumpStack();
+
+                asserter->quadruples.emplace_back(new Asserter::SFQuadruple(
+                    asserter->varStack.pop(),
+                    -1));
+            }
+        },
+        {
+            {3002}, [&](Token &t) {
+                logsStream << "Found else in If Statement, adding SI without destiny" << std::endl;
+                logsStream << "Adding " << asserter->quadruples.size() << " to jumpStack" << std::endl;
+                asserter->jumpStack.emplace_back(asserter->quadruples.size());
+                asserter->quadruples.emplace_back(new Asserter::SIQuadruple(-1));
+                logsStream << "Replacing jump of inst: " << asserter->jumpStack[asserter->jumpStack.size() - 2] <<
+                        " by " << asserter->quadruples.size() - 1 << std::endl;
+
+                if (const auto sf = dynamic_cast<Asserter::SFQuadruple *>
+                        (asserter->quadruples[asserter->jumpStack[asserter->jumpStack.size() - 2]])) {
+                    sf->destiny = asserter->quadruples.size();
+                    asserter->jumpStack.remove(asserter->jumpStack.size() - 2);
+                    printJumpStack();
+                    return;
+                }
+
+                asserter->errors.emplace_back("FATAL: instruction " +
+                                              std::to_string(asserter->jumpStack[asserter->jumpStack.size() - 2]) +
+                                              " wasn't an SF!");
+            }
+        },
+        {
+            {3004}, [&](Token &t) {
                 logsStream << "Got endif keyword, trying to remove MFF" << std::endl;
                 const auto removed = asserter->operatorsStack.pop();
 
@@ -323,6 +355,32 @@ public:
                 };
 
                 tryApplyOperators(expectedOperators, t);
+            }
+        },
+        {
+            {3003}, [&](Token &t) {
+                logsStream << "Found end of instructions, replacing " << asserter->jumpStack.top() << " by " << asserter
+                        ->quadruples.size() - 1
+                        << std::endl;
+                printJumpStack();
+
+                if (const auto sf = dynamic_cast<Asserter::SFQuadruple *>
+                        (asserter->quadruples[asserter->jumpStack.top()])) {
+                    sf->destiny = asserter->quadruples.size();
+                    asserter->jumpStack.remove(asserter->jumpStack.size() - 1);
+                    printJumpStack();
+                    return;
+                }
+                if (const auto si = dynamic_cast<Asserter::SIQuadruple *>
+                        (asserter->quadruples[asserter->jumpStack.top()])) {
+                    si->destiny = asserter->quadruples.size();
+                    asserter->jumpStack.remove(asserter->jumpStack.size() - 1);
+                    printJumpStack();
+                    return;
+                }
+
+                asserter->errors.emplace_back("FATAL: instruction " + std::to_string(asserter->jumpStack[1]) +
+                                              " wasn't an SF or SI!");
             }
         },
     };
@@ -710,10 +768,10 @@ private:
         {129},
         {130},
         {1015, 13, 1024, 119, 29, 120, 1016},
-        {1011, 3000, 119, 29, 120, 13, 24, 25, 1014, 3001},
+        {1011, 3000, 119, 29, 120, 3001, 13, 24, 25, 3003, 1014, 3004},
         {1012, 119, 29, 120, 13, 24},
         {-100},
-        {1013, 13},
+        {1013, 3002, 13},
         {-100},
         {1017, 119, 29, 120, 13, 1018},
         {1025, 101, 119, 29, 1030, 29, 120, 13, 1026},

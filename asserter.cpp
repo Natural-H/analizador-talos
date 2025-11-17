@@ -59,5 +59,8 @@ std::map<Asserter::Operator, std::string> Asserter::operatorToString = {
     {Not, "!"},
     {And, "&&"},
     {Or, "||"},
-    {Mff, "Mff"}
+    {Mff, "Mff"},
+    {SI, "SI"},
+    {SF, "SF"},
+    {SV, "SV"}
 };

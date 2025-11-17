@@ -25,6 +25,9 @@ void Grammaryzer::callActions(const std::vector<ProductionAction> &actions, std:
                      });
 
         for_each(filtered.begin(), filtered.end(), [&](const ProductionAction &action) {
+            if (action.triggers[0] >= 3000 && asserter->hasErrors())
+                return;
+
             action.action(currentToken);
             logsStream << std::endl;
         });
@@ -49,6 +52,7 @@ GrammarResults Grammaryzer::checkGrammar() {
     asserter->varStack.clear();
     asserter->operatorsStack.clear();
     asserter->quadruples.clear();
+    asserter->jumpStack.clear();
     rCounter = 0;
 
     do {
@@ -142,6 +146,20 @@ void Grammaryzer::printOperatorsStack() {
     });
 
     logsStream << Asserter::operatorToString[asserter->operatorsStack[0]] << "]" << std::endl;
+}
+
+void Grammaryzer::printJumpStack() {
+    logsStream << "JumpStack: [";
+    if (asserter->jumpStack.empty()) {
+        logsStream << "]" << std::endl;
+        return;
+    }
+
+    std::for_each(asserter->jumpStack.crbegin(), asserter->jumpStack.crend() - 1, [&](const auto &i) {
+        logsStream << i << ", ";
+    });
+
+    logsStream << asserter->jumpStack[0] << "]" << std::endl;
 }
 
 void Grammaryzer::printTypesTable() {

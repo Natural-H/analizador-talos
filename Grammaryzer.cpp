@@ -20,7 +20,7 @@ GrammarResults Grammaryzer::checkGrammar() {
     cleanLogs();
 
     asserter->errors.clear();
-    asserter->variablesTypes.clear();
+    asserter->variables.clear();
     asserter->typesStack.clear();
     asserter->operatorsStack.clear();
 
@@ -143,9 +143,9 @@ void Grammaryzer::printOperatorsStack() {
 
 void Grammaryzer::printTypesTable() {
     logsStream << "Types table: " << std::endl;
-    std::for_each(asserter->variablesTypes.cbegin(), asserter->variablesTypes.cend(),
-                  [&](const auto &item) {
-                      logsStream << "[" << item.first << " | " << asserter->typeToString[item.second] << "]"
+    std::for_each(asserter->variables.cbegin(), asserter->variables.cend(),
+                  [&](const Asserter::Variable &item) {
+                      logsStream << "[" << item.name << " | " << asserter->typeToString[item.type] << "]"
                               << std::endl;
                   });
 }

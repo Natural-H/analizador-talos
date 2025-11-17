@@ -29,11 +29,23 @@ public:
         Mff,
     };
 
-    std::map<std::string, Type> variablesTypes;
+    struct Variable {
+        std::string name;
+        Type type;
+    };
+
+    // std::map<std::string, Type> variablesTypes;
+    std::vector<Variable> variables;
 
     QStack<Type> typesStack;
     QStack<Operator> operatorsStack;
     std::vector<std::string> errors;
+
+    [[nodiscard]] Type findType(const std::string &name) const;
+
+    [[nodiscard]] Variable *findVar(const std::string &name) const;
+
+    [[nodiscard]] bool varExists(const std::string &name) const;
 
     std::map<Type, std::string> typeToString = {
         {Int, "Int"},

@@ -201,6 +201,10 @@ namespace ui {
         ui->tableGrammarResults->insertRow(ui->tableGrammarResults->rowCount());
         const auto [grammarResult, semanticErrors] = grammaryzer->checkGrammar();
 
+        if (!semanticErrors.empty()) {
+            //disable button here
+        }
+
         const auto result = new QTableWidgetItem(grammarResult.data());
         result->setTextAlignment(Qt::AlignTop | Qt::AlignLeft);
         ui->tableGrammarResults->setItem(ui->tableGrammarResults->rowCount() - 1, 0, result);

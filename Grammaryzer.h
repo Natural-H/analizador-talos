@@ -64,24 +64,24 @@ public:
             {2001}, [&](Token &t) {
                 logsStream << "Got declaration for: " << t.content << std::endl;
 
-                if (asserter->variablesTypes.find(t.content) != asserter->variablesTypes.end()) {
+                if (asserter->varExists(t.content)) {
                     logsStream << "Error: " + t.content + " already in here." << std::endl;
                     asserter->errors.emplace_back(
                         "Error (L: " + std::to_string(t.line + 1) + "): " + t.content + " already in here.");
                     return;
                 }
 
-                asserter->variablesTypes.insert({t.content, Asserter::Type::Unassigned});
+                asserter->variables.push_back({t.content, Asserter::Type::Unassigned});
             }
         },
         {
             {2002}, [&](Token &t) {
-                auto type = static_cast<Asserter::Type>(t.state - 1005);
-                logsStream << "Got Type: " << asserter->typeToString[type] << std::endl;
-                std::for_each(asserter->variablesTypes.begin(), asserter->variablesTypes.end(), [&](auto &item) {
-                    if (item.second == Asserter::Type::Unassigned)
-                        item.second = type;
-                });
+                const auto gotType = static_cast<Asserter::Type>(t.state - 1005);
+                logsStream << "Got Type: " << asserter->typeToString[gotType] << std::endl;
+                for (auto &[name, type]: asserter->variables) {
+                    if (type == Asserter::Type::Unassigned)
+                        type = gotType;
+                }
             }
         },
         {
@@ -114,20 +114,24 @@ public:
                     return;
                 }
 
-                const auto item = asserter->variablesTypes.find(t.content);
-                if (item == asserter->variablesTypes.end()) {
+                const auto variable = std::find_if(asserter->variables.cbegin(),
+                                                   asserter->variables.cend(),
+                                                   [&](const Asserter::Variable &var) {
+                                                       return var.name == t.content;
+                                                   });
+                if (variable == asserter->variables.end()) {
                     logsStream << "Error: item " << t.content << " not found!" << std::endl;
                     asserter->errors.emplace_back(
                         "Error (L: " + std::to_string(t.line + 1) + "): item " + t.content + " not found!");
                     logsStream << "Time to brutally patch this by adding " << t.content << " as Float" << std::endl;
 
-                    asserter->variablesTypes[t.content] = Asserter::Type::Float;
+                    asserter->variables.push_back({t.content, Asserter::Type::Float});
                     asserter->typesStack.emplace_back(Asserter::Type::Float);
                     printTypesTable();
                     return;
                 }
 
-                asserter->typesStack.emplace_back(item->second);
+                asserter->typesStack.emplace_back(variable->type);
                 printTypesStack();
             }
         },
@@ -291,6 +295,7 @@ public:
                         printOperatorsStack();
                         return;
                     }
+
                     asserter->typesStack.emplace_back(result);
                     printTypesStack();
                     printOperatorsStack();

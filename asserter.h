@@ -37,13 +37,13 @@ public:
     // std::map<std::string, Type> variablesTypes;
     std::vector<Variable> variables;
 
-    QStack<Type> typesStack;
+    QStack<Variable> varStack;
     QStack<Operator> operatorsStack;
     std::vector<std::string> errors;
 
     [[nodiscard]] Type findType(const std::string &name) const;
 
-    [[nodiscard]] Variable *findVar(const std::string &name) const;
+    [[nodiscard]] Variable findVar(const std::string &name) const;
 
     [[nodiscard]] bool varExists(const std::string &name) const;
 

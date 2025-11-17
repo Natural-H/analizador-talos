@@ -9,9 +9,9 @@ Asserter::Type Asserter::findType(const std::string &name) const {
     return var != variables.cend() ? var->type : Error;
 }
 
-Asserter::Variable* Asserter::findVar(const std::string &name) const {
-    return std::find_if(variables.cbegin(), variables.cend(),
-                         [&](const Variable &variable) { return name == variable.name; })._Ptr;
+Asserter::Variable Asserter::findVar(const std::string &name) const {
+    return *std::find_if(variables.cbegin(), variables.cend(),
+                         [&](const Variable &variable) { return name == variable.name; });
 }
 
 bool Asserter::varExists(const std::string &name) const {

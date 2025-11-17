@@ -1,5 +1,8 @@
 #include "Grammaryzer.h"
 #include "Utils.h"
+#include "grammarResult.h"
+
+#include <stack>
 
 Grammaryzer::Grammaryzer() {
     tokenizer = new Tokenizer();
@@ -21,8 +24,9 @@ GrammarResults Grammaryzer::checkGrammar() {
 
     asserter->errors.clear();
     asserter->variables.clear();
-    asserter->typesStack.clear();
+    asserter->varStack.clear();
     asserter->operatorsStack.clear();
+    rCounter = 0;
 
     do {
         if (currentToken.isError()) {
@@ -125,11 +129,12 @@ void Grammaryzer::cleanLogs() {
 
 void Grammaryzer::printTypesStack() {
     logsStream << "TypeStack: [";
-    std::for_each(asserter->typesStack.crbegin(), asserter->typesStack.crend() - 1, [&](const auto &type) {
-        logsStream << asserter->typeToString[type] << ", ";
+    std::for_each(asserter->varStack.crbegin(), asserter->varStack.crend() - 1, [&](const Asserter::Variable &var) {
+        logsStream << var.name << ":" << asserter->typeToString[var.type] << ", ";
     });
 
-    logsStream << asserter->typeToString[asserter->typesStack[0]] << "]" << std::endl;
+    logsStream << asserter->varStack[0].name << ":" <<
+            asserter->typeToString[asserter->varStack[0].type] << "]" << std::endl;
 }
 
 void Grammaryzer::printOperatorsStack() {

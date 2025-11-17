@@ -67,7 +67,7 @@ public:
 
         OperationQuadruple(const Operator op, Variable operand1, Variable operand2,
                            std::string result) : Quadruple(op), operand1(std::move(operand1)),
-                                                       operand2(std::move(operand2)), result(std::move(result)) {
+                                                 operand2(std::move(operand2)), result(std::move(result)) {
         }
     };
 
@@ -83,14 +83,30 @@ public:
     };
 
     struct SIQuadruple : Quadruple {
-        double destiny;
+        long long destiny = 0;
+
+        SIQuadruple() = default;
+
+        SIQuadruple(const Operator op, const long long destiny) : Quadruple(op), destiny(destiny) {
+        }
     };
 
     struct SFQuadruple : SIQuadruple {
         Variable condition;
+
+        SFQuadruple() = default;
+
+        SFQuadruple(const Operator op, Variable condition, const long long destiny) : SIQuadruple(op, destiny),
+            condition(std::move(condition)) {
+        }
     };
 
     struct SVQuadruple : SFQuadruple {
+        SVQuadruple() = default;
+
+        SVQuadruple(const Operator op, const Variable &condition, const long long destiny) : SFQuadruple(
+            op, condition, destiny) {
+        }
     };
 
     Variable emptyVar = {"", Unassigned};

@@ -25,11 +25,14 @@ public:
 
     ~QuadsWindow() override;
 
-    void addOperation(const Asserter::OperationQuadruple*, int index);
-    void addAssign(const Asserter::AssignQuadruple*, int index);
+    void addOperation(const Asserter::OperationQuadruple*, int index) const;
+    void addAssign(const Asserter::AssignQuadruple*, int index) const;
+    void addSI(const Asserter::SIQuadruple*, int index) const;
+    void addSF(const Asserter::SFQuadruple*, int index) const;
+    void addSV(const Asserter::SVQuadruple*, int index) const;
 
 public slots:
-    void drawQuadruples(const std::vector<Asserter::Quadruple*>&);
+    void drawQuadruples(const std::vector<Asserter::Quadruple*>&) const;
 private:
     Ui::QuadsWindow *ui;
 };

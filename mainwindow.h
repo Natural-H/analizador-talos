@@ -15,7 +15,9 @@
 #include "Grammaryzer.h"
 #include "Highlighter.h"
 #include "logswindow.h"
+#include "quadswindow.h"
 #include "ui_logswindow.h"
+#include "ui_quadsWindow.h"
 
 namespace ui
 {
@@ -42,6 +44,7 @@ namespace ui
     private:
         Ui::MainWindow* ui;
         logswindow* loggerWindow;
+        QuadsWindow* quadsWindow;
         QFile file;
         QString filename;
         bool isFileSaved = false;

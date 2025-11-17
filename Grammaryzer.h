@@ -14,7 +14,9 @@
 #include <sstream>
 
 #include <functional>
+#include <stack>
 
+#include "asserter.h"
 #include "asserter.h"
 
 struct ProductionAction {
@@ -33,10 +35,14 @@ class Grammaryzer : public QObject {
 signals:
     void newLogs(const std::ostringstream &oss);
 
+    void newQuadruples(const std::vector<Asserter::Quadruple *> &quadruples);
+
 public:
     Grammaryzer();
 
     ~Grammaryzer() override;
+
+    void callActions(const std::vector<ProductionAction> &, std::stack<int> &, Token &currentToken);
 
     GrammarResults checkGrammar();
 
@@ -78,7 +84,7 @@ public:
         {
             {2002}, [&](Token &t) {
                 const auto gotType = static_cast<Asserter::Type>(t.state - 1005);
-                logsStream << "Got Type: " << asserter->typeToString[gotType] << std::endl;
+                logsStream << "Got Type: " << Asserter::typeToString[gotType] << std::endl;
                 for (auto &[name, type]: asserter->variables) {
                     if (type == Asserter::Type::Unassigned)
                         type = gotType;
@@ -150,7 +156,6 @@ public:
             {2007}, [&](Token &t) {
                 logsStream << "Got item: " << t.content << " added to operatorsStack" << std::endl;
                 asserter->operatorsStack.emplace_back(static_cast<Asserter::Operator>(t.state - 105));
-                // logsStream << "opStack top: " << asserter->operatorsStack.top() << std::endl;
                 printOperatorsStack();
             }
         },
@@ -165,7 +170,6 @@ public:
             {2009}, [&](Token &t) {
                 logsStream << "Got item: " << t.content << " removed MFF from operatorsStack" << std::endl;
                 asserter->operatorsStack.pop();
-                // logsStream << "Current top: " << asserter->operatorsStack.top() << std::endl;
                 printOperatorsStack();
             }
         },
@@ -174,30 +178,37 @@ public:
                 logsStream << "Got item: " << t.content << " time to check the operation" << std::endl;
 
                 if (asserter->operatorsStack.top() != Asserter::Operator::Assign) {
-                    logsStream << "Top of operators Stack wasn't equals sign, it was: " << asserter->operatorToString[
+                    logsStream << "Top of operators Stack wasn't equals sign, it was: " << Asserter::operatorToString[
                         asserter->operatorsStack.top()] << std::endl;
                     asserter->errors.emplace_back(
-                        "Top of operators Stack wasn't equals sign, it was: " + asserter->operatorToString[
+                        "Top of operators Stack wasn't equals sign, it was: " + Asserter::operatorToString[
                             asserter->operatorsStack.top()]);
                     return;
                 }
 
                 asserter->operatorsStack.pop();
 
-                const auto &op1 = asserter->varStack.pop().type;
-                const auto &op2 = asserter->varStack.pop().type;
+                const auto &operand1 = asserter->varStack.pop();
+                const auto &operand2 = asserter->varStack.pop();
 
-                if (op2 == op1)
+                if (operand2.type == operand1.type) {
+                    if (!asserter->hasErrors())
+                        asserter->quadruples.emplace_back(new Asserter::AssignQuadruple(
+                            Asserter::Operator::Assign, operand2, operand1.name
+                        ));
+
                     logsStream << "Assigned!" << std::endl;
-                else {
-                    logsStream << "Error: Types [" << asserter->typeToString[op2] << "] and ["
-                            << asserter->typeToString[op1] << "] aren't equal!" << std::endl;
+                } else {
+                    logsStream << "Error: Types [" << Asserter::typeToString[operand2.type] << "] and ["
+                            << Asserter::typeToString[operand1.type] << "] aren't equal!" << std::endl;
                     asserter->errors.emplace_back(
-                        "Error (L: " + std::to_string(t.line + 1) + "): Types [" + asserter->typeToString[op2] +
-                        "] and [" + asserter->typeToString[op1] + "] aren't equal!");
+                        "Error (L: " + std::to_string(t.line + 1) + "): Types [" + Asserter::typeToString[operand2.type]
+                        + "] and [" + Asserter::typeToString[operand1.type] + "] aren't equal!");
                 }
-
-
+            }
+        },
+        {
+            {2999}, [&](Token &t) {
                 if (!asserter->varStack.empty()) {
                     logsStream << "FATAL: typesStack is not empty! it has " << asserter->varStack.size() <<
                             " items" << std::endl;
@@ -224,10 +235,11 @@ public:
                 logsStream << "Got endif keyword, trying to remove MFF" << std::endl;
                 const auto removed = asserter->operatorsStack.pop();
 
-                logsStream << "Removing: " << asserter->operatorToString[removed] << std::endl;
+                logsStream << "Removing: " << Asserter::operatorToString[removed] << std::endl;
 
                 if (removed != Asserter::Operator::Mff) {
-                    asserter->errors.emplace_back("FATAL: Removed " + asserter->operatorToString[removed] + " instead of MFF!");
+                    asserter->errors.emplace_back(
+                        "FATAL: Removed " + Asserter::operatorToString[removed] + " instead of MFF!");
                 }
 
                 printOperatorsStack();
@@ -322,24 +334,24 @@ private:
 
         while (std::find(expectedOperators.cbegin(), expectedOperators.cend(), asserter->operatorsStack.top())
                != expectedOperators.cend()) {
-            const auto &operand2 = asserter->varStack.pop().type;
-            const auto &operand1 = asserter->varStack.pop().type;
+            const auto &operand2 = asserter->varStack.pop();
+            const auto &operand1 = asserter->varStack.pop();
 
             const auto &op = asserter->operatorsStack.pop();
 
-            logsStream << "Applying " << asserter->typeToString[operand1] << ", " << asserter->typeToString[
-                operand2] << " with operator: " << asserter->operatorToString[op] << std::endl;
+            logsStream << "Applying " << Asserter::typeToString[operand1.type] << ", " << Asserter::typeToString[
+                operand2.type] << " with operator: " << Asserter::operatorToString[op] << std::endl;
 
-            const auto &result = asserter->applyOperator(operand1, operand2, op);
+            const auto &result = asserter->applyOperator(operand1.type, operand2.type, op);
             if (result == Asserter::Type::Error) {
-                logsStream << "Error: incompatible types, cannot do [" << asserter->typeToString[operand1] <<
-                        " " << asserter->operatorToString[op] << " " << asserter->typeToString[operand2] << "]"
+                logsStream << "Error: incompatible types, cannot do [" << Asserter::typeToString[operand1.type] <<
+                        " " << Asserter::operatorToString[op] << " " << Asserter::typeToString[operand2.type] << "]"
                         << std::endl;
 
                 asserter->errors.emplace_back(
-                    "Error (L: " + std::to_string(t.line + 1) + "): incompatible types, cannot do [" + asserter
-                    ->typeToString[operand1] + " " + asserter->operatorToString[op] + " " + asserter->
-                    typeToString[operand2] + "]");
+                    "Error (L: " + std::to_string(t.line + 1) + "): incompatible types, cannot do [" + Asserter::
+                    typeToString[operand1.type] + " " + Asserter::operatorToString[op] + " " + Asserter::
+                    typeToString[operand2.type] + "]");
 
                 logsStream << "Patching with Float in here..." << std::endl;
 
@@ -349,7 +361,13 @@ private:
                 return;
             }
 
-            asserter->varStack.push_back({"r" + std::to_string(rCounter++), result});
+            asserter->varStack.push_back({"r" + std::to_string(rCounter), result});
+
+            if (!asserter->hasErrors())
+                asserter->quadruples.push_back(new Asserter::OperationQuadruple(
+                    op, operand1, operand2, "r" + std::to_string(rCounter++)
+                ));
+
             printTypesStack();
             printOperatorsStack();
         }
@@ -651,7 +669,7 @@ private:
         {-100},
         {124, 101, 2001, 6},
         {-100},
-        {1003, 2000, 13, 1004},
+        {1003, 2000, 13, 1004, 2999},
         {1005},
         {1006},
         {1007},

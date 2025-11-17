@@ -14,6 +14,28 @@ Grammaryzer::~Grammaryzer() {
     delete asserter;
 }
 
+void Grammaryzer::callActions(const std::vector<ProductionAction> &actions, std::stack<int> &stack,
+                              Token &currentToken) {
+    while (stack.top() >= 2000) {
+        std::vector<ProductionAction> filtered;
+        std::copy_if(actions.begin(), actions.end(), std::back_inserter(filtered),
+                     [&](const auto &action) {
+                         return std::find(action.triggers.cbegin(), action.triggers.cend(), stack.top()) != action
+                                .triggers.cend();
+                     });
+
+        for_each(filtered.begin(), filtered.end(), [&](const ProductionAction &action) {
+            action.action(currentToken);
+            logsStream << std::endl;
+        });
+
+        if (!filtered.empty())
+            stack.pop();
+        else
+            break;
+    }
+}
+
 GrammarResults Grammaryzer::checkGrammar() {
     std::stack<int> stack;
     stack.emplace(499); // Push EOF token
@@ -26,6 +48,7 @@ GrammarResults Grammaryzer::checkGrammar() {
     asserter->variables.clear();
     asserter->varStack.clear();
     asserter->operatorsStack.clear();
+    asserter->quadruples.clear();
     rCounter = 0;
 
     do {
@@ -42,24 +65,7 @@ GrammarResults Grammaryzer::checkGrammar() {
             continue;
         }
 
-        while (stack.top() >= 2000) {
-            std::vector<ProductionAction> filtered;
-            std::copy_if(afterStateActions.begin(), afterStateActions.end(), std::back_inserter(filtered),
-                         [&](const auto &action) {
-                             return std::find(action.triggers.cbegin(), action.triggers.cend(), stack.top()) != action
-                                    .triggers.cend();
-                         });
-
-            for_each(filtered.begin(), filtered.end(), [&](const auto &action) {
-                action.action(currentToken);
-                logsStream << std::endl;
-            });
-
-            if (!filtered.empty())
-                stack.pop();
-            else
-                break;
-        }
+        callActions(afterStateActions, stack, currentToken);
 
         if (stack.top() > 43) {
             if (currentToken.state == 499 && stack.top() == 499) // EOF
@@ -73,25 +79,7 @@ GrammarResults Grammaryzer::checkGrammar() {
             }
 
             stack.pop();
-
-            while (stack.top() >= 2000) {
-                std::vector<ProductionAction> filtered;
-                std::copy_if(onTopActions.begin(), onTopActions.end(), std::back_inserter(filtered),
-                             [&](const auto &action) {
-                                 return std::find(action.triggers.cbegin(), action.triggers.cend(), stack.top()) !=
-                                        action.triggers.cend();
-                             });
-
-                for_each(filtered.begin(), filtered.end(), [&](const auto &action) {
-                    action.action(currentToken);
-                    logsStream << std::endl;
-                });
-
-                if (!filtered.empty())
-                    stack.pop();
-                else
-                    break;
-            }
+            callActions(onTopActions, stack, currentToken);
 
             currentToken = tokenizer->findNextToken();
             continue;
@@ -135,11 +123,11 @@ void Grammaryzer::printTypesStack() {
     }
 
     std::for_each(asserter->varStack.crbegin(), asserter->varStack.crend() - 1, [&](const Asserter::Variable &var) {
-        logsStream << var.name << ":" << asserter->typeToString[var.type] << ", ";
+        logsStream << var.name << ":" << Asserter::typeToString[var.type] << ", ";
     });
 
     logsStream << asserter->varStack[0].name << ":" <<
-            asserter->typeToString[asserter->varStack[0].type] << "]" << std::endl;
+            Asserter::typeToString[asserter->varStack[0].type] << "]" << std::endl;
 }
 
 void Grammaryzer::printOperatorsStack() {
@@ -150,17 +138,17 @@ void Grammaryzer::printOperatorsStack() {
     }
 
     std::for_each(asserter->operatorsStack.crbegin(), asserter->operatorsStack.crend() - 1, [&](const auto &oper) {
-        logsStream << asserter->operatorToString[oper] << ", ";
+        logsStream << Asserter::operatorToString[oper] << ", ";
     });
 
-    logsStream << asserter->operatorToString[asserter->operatorsStack[0]] << "]" << std::endl;
+    logsStream << Asserter::operatorToString[asserter->operatorsStack[0]] << "]" << std::endl;
 }
 
 void Grammaryzer::printTypesTable() {
     logsStream << "Types table: " << std::endl;
     std::for_each(asserter->variables.cbegin(), asserter->variables.cend(),
                   [&](const Asserter::Variable &item) {
-                      logsStream << "[" << item.name << " | " << asserter->typeToString[item.type] << "]"
+                      logsStream << "[" << item.name << " | " << Asserter::typeToString[item.type] << "]"
                               << std::endl;
                   });
 }

@@ -13,6 +13,7 @@ namespace ui {
         fileDialog->setNameFilter("Talos Files (*.tls);;All Files (*)");
 
         loggerWindow = new logswindow(this);
+        quadsWindow = new QuadsWindow(this);
 
         grammaryzer = new Grammaryzer();
         highlighter = new Highlighter(ui->sourcePanel->document());
@@ -37,6 +38,10 @@ namespace ui {
             loggerWindow->show();
         });
 
+        connect(ui->showQuadsButton, &QPushButton::clicked, this, [&] {
+            quadsWindow->show();
+        });
+
         connect(grammaryzer->tokenizer, &Tokenizer::tokenFound, this, &MainWindow::updateTables);
 
         connect(ui->sourcePanel, &QPlainTextEdit::cursorPositionChanged, this, [&] {
@@ -58,6 +63,7 @@ namespace ui {
         });
 
         connect(grammaryzer, &Grammaryzer::newLogs, loggerWindow, &logswindow::setLogs);
+        connect(grammaryzer, &Grammaryzer::newQuadruples, quadsWindow, &QuadsWindow::drawQuadruples);
 
         ui->checkUseStyles->setCheckState(Qt::Checked);
         ui->checkBoxAuto->setCheckState(Qt::Unchecked);
@@ -91,6 +97,7 @@ namespace ui {
         delete fileDialog;
 
         delete loggerWindow;
+        delete quadsWindow;
         delete ui;
     }
 
@@ -201,15 +208,14 @@ namespace ui {
         ui->tableGrammarResults->insertRow(ui->tableGrammarResults->rowCount());
         const auto [grammarResult, semanticErrors] = grammaryzer->checkGrammar();
 
-        if (!semanticErrors.empty()) {
-            //disable button here
-        }
+        ui->showQuadsButton->setEnabled(!grammaryzer->asserter->hasErrors());
 
         const auto result = new QTableWidgetItem(grammarResult.data());
         result->setTextAlignment(Qt::AlignTop | Qt::AlignLeft);
         ui->tableGrammarResults->setItem(ui->tableGrammarResults->rowCount() - 1, 0, result);
 
         emit grammaryzer->newLogs(grammaryzer->logsStream);
+        emit grammaryzer->newQuadruples(grammaryzer->asserter->quadruples);
 
         std::for_each(semanticErrors.cbegin(), semanticErrors.cend(), [&](const auto &item) {
             const auto error = new QTableWidgetItem(item.data());

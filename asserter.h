@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 #include <QStack>
+#include <utility>
 
 class Asserter {
 public:
@@ -36,12 +37,65 @@ public:
         And,
         Or,
         Mff,
+        SI,
+        SF,
+        SV
     };
 
     struct Variable {
         std::string name;
         Type type;
     };
+
+    struct Quadruple {
+        Operator op;
+
+        virtual ~Quadruple() = default;
+
+        Quadruple() = default;
+
+        explicit Quadruple(const Operator operator_) : op(operator_) {
+        };
+    };
+
+    struct OperationQuadruple : Quadruple {
+        Variable operand1;
+        Variable operand2;
+        std::string result;
+
+        OperationQuadruple() = default;
+
+        OperationQuadruple(const Operator op, Variable operand1, Variable operand2,
+                           std::string result) : Quadruple(op), operand1(std::move(operand1)),
+                                                       operand2(std::move(operand2)), result(std::move(result)) {
+        }
+    };
+
+    struct AssignQuadruple : Quadruple {
+        Variable toAssign;
+        std::string result;
+
+        AssignQuadruple() = default;
+
+        AssignQuadruple(const Operator operator_, Variable variable, std::string name) : Quadruple(operator_),
+            toAssign(std::move(variable)), result(std::move(name)) {
+        };
+    };
+
+    struct SIQuadruple : Quadruple {
+        double destiny;
+    };
+
+    struct SFQuadruple : SIQuadruple {
+        Variable condition;
+    };
+
+    struct SVQuadruple : SFQuadruple {
+    };
+
+    Variable emptyVar = {"", Unassigned};
+
+    std::vector<Quadruple *> quadruples;
 
     // std::map<std::string, Type> variablesTypes;
     std::vector<Variable> variables;
@@ -56,34 +110,10 @@ public:
 
     [[nodiscard]] bool varExists(const std::string &name) const;
 
-    std::map<Type, std::string> typeToString = {
-        {Int, "Int"},
-        {Float, "Float"},
-        {Char, "Char"},
-        {String, "String"},
-        {Bool, "Bool"},
-        {Void, "Void"},
-        {Error, "Error"},
-        {Unassigned, "Unassigned"},
-    };
+    [[nodiscard]] bool hasErrors() const;
 
-    std::map<Operator, std::string> operatorToString = {
-        {Add, "+"},
-        {Dif, "-"},
-        {Mul, "*"},
-        {Div, "/"},
-        {Assign, "="},
-        {Equals, "=="},
-        {Lesser, "<"},
-        {LesserEq, "<="},
-        {Greater, ">"},
-        {GreaterEq, ">="},
-        {NotEquals, "!="},
-        {Not, "!"},
-        {And, "&&"},
-        {Or, "||"},
-        {Mff, "Mff"}
-    };
+    static std::map<Type, std::string> typeToString;
+    static std::map<Operator, std::string> operatorToString;
 
     [[nodiscard]] Type applyOperator(Type, Type, Operator) const;
 

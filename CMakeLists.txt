@@ -15,24 +15,27 @@ find_package(Qt6 COMPONENTS
         REQUIRED)
 
 add_executable(AnalizadorTalos main.cpp
-    mainwindow.cpp
-    mainwindow.h
-    mainwindow.ui
-    Highlighter.h
-    Highlighter.cpp
-    Tokenizer.cpp
-    Tokenizer.h
-    Grammaryzer.cpp
-    Grammaryzer.h
-    Token.h
-    Utils.h
-    asserter.h
-    asserter.cpp
-    logswindow.cpp
-    logswindow.h
-    logswindow.ui
-    GrammarResult.h
-    GrammarResult.cpp
+        mainwindow.cpp
+        mainwindow.h
+        mainwindow.ui
+        Highlighter.h
+        Highlighter.cpp
+        Tokenizer.cpp
+        Tokenizer.h
+        Grammaryzer.cpp
+        Grammaryzer.h
+        Token.h
+        Utils.h
+        asserter.h
+        asserter.cpp
+        logswindow.cpp
+        logswindow.h
+        logswindow.ui
+        GrammarResult.h
+        GrammarResult.cpp
+        quadswindow.cpp
+        quadswindow.h
+        quadswindow.ui
 )
 target_link_libraries(AnalizadorTalos
         Qt::Core

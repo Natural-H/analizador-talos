@@ -19,6 +19,10 @@ bool Asserter::varExists(const std::string &name) const {
                         [&](const Variable &variable) { return name == variable.name; }) != variables.cend();
 }
 
+bool Asserter::hasErrors() const {
+    return !errors.empty();
+}
+
 Asserter::Type Asserter::applyOperator(const Type first, const Type second, const Operator op) const {
     if (first >= Void || second >= Void)
         return Error;
@@ -28,3 +32,32 @@ Asserter::Type Asserter::applyOperator(const Type first, const Type second, cons
 
     return operatorsTable[first][op][second];
 }
+
+std::map<Asserter::Type, std::string> Asserter::typeToString = {
+    {Int, "Int"},
+    {Float, "Float"},
+    {Char, "Char"},
+    {String, "String"},
+    {Bool, "Bool"},
+    {Void, "Void"},
+    {Error, "Error"},
+    {Unassigned, "Unassigned"},
+};
+
+std::map<Asserter::Operator, std::string> Asserter::operatorToString = {
+    {Add, "+"},
+    {Dif, "-"},
+    {Mul, "*"},
+    {Div, "/"},
+    {Assign, "="},
+    {Equals, "=="},
+    {Lesser, "<"},
+    {LesserEq, "<="},
+    {Greater, ">"},
+    {GreaterEq, ">="},
+    {NotEquals, "!="},
+    {Not, "!"},
+    {And, "&&"},
+    {Or, "||"},
+    {Mff, "Mff"}
+};

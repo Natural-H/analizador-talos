@@ -102,8 +102,10 @@ public:
                             break;
                         case Tokenizer::States::constanteString:
                             state = Asserter::Type::String;
+                            break;
                         case Tokenizer::States::constanteCaracter:
                             state = Asserter::Type::Char;
+                            break;
                         default:
                             state = Asserter::Type::Unassigned;
                     }

@@ -25,7 +25,16 @@ public:
         Dif,
         Mul,
         Div,
-        Equal,
+        Assign,
+        Equals,
+        Lesser,
+        LesserEq,
+        Greater,
+        GreaterEq,
+        NotEquals,
+        Not,
+        And,
+        Or,
         Mff,
     };
 
@@ -63,13 +72,22 @@ public:
         {Dif, "-"},
         {Mul, "*"},
         {Div, "/"},
-        {Equal, "="},
-        {Mff, "Mff"},
+        {Assign, "="},
+        {Equals, "=="},
+        {Lesser, "<"},
+        {LesserEq, "<="},
+        {Greater, ">"},
+        {GreaterEq, ">="},
+        {NotEquals, "!="},
+        {Not, "!"},
+        {And, "&&"},
+        {Or, "||"},
+        {Mff, "Mff"}
     };
 
     [[nodiscard]] Type applyOperator(Type, Type, Operator) const;
 
-    Type operatorsTable[5][4][5] = {
+    Type operatorsTable[5][13][5] = {
         {
             // Int allowed operators
             //  int  float  char   string bool
@@ -77,34 +95,79 @@ public:
             {Int, Float, Error, Error, Error}, // diff
             {Int, Float, Error, Error, Error}, // mult
             {Int, Float, Error, Error, Error}, // div
+            {Bool, Bool, Error, Error, Error}, // isEqual,
+            {Bool, Bool, Error, Error, Error}, // lesser,
+            {Bool, Bool, Error, Error, Error}, // lesserEq,
+            {Bool, Bool, Error, Error, Error}, // greater,
+            {Bool, Bool, Error, Error, Error}, // greaterEq,
+            {Bool, Bool, Error, Error, Error}, // notEqual,
+            {Error, Error, Error, Error, Error}, // not_,
+            {Error, Error, Error, Error, Error}, // and_,
+            {Error, Error, Error, Error, Error} // or_,
         },
         {
             // Float allowed operators
             {Float, Float, Error, Error, Error},
             {Float, Float, Error, Error, Error},
             {Float, Float, Error, Error, Error},
-            {Float, Float, Error, Error, Error}
+            {Float, Float, Error, Error, Error},
+            {Bool, Bool, Error, Error, Error}, // isEqual,
+            {Bool, Bool, Error, Error, Error}, // lesser,
+            {Bool, Bool, Error, Error, Error}, // lesserEq,
+            {Bool, Bool, Error, Error, Error}, // greater,
+            {Bool, Bool, Error, Error, Error}, // greaterEq,
+            {Bool, Bool, Error, Error, Error}, // notEqual,
+            {Error, Error, Error, Error, Error}, // not_,
+            {Error, Error, Error, Error, Error}, // and_,
+            {Error, Error, Error, Error, Error} // or_,
         },
         {
             // Char allowed operators
             {Error, Error, Error, Error, Error},
             {Error, Error, Error, Error, Error},
             {Error, Error, Error, Error, Error},
-            {Error, Error, Error, Error, Error}
+            {Error, Error, Error, Error, Error},
+            {Error, Error, Bool, Error, Error}, // isEqual,
+            {Error, Error, Error, Error, Error}, // lesser,
+            {Error, Error, Error, Error, Error}, // lesserEq,
+            {Error, Error, Error, Error, Error}, // greater,
+            {Error, Error, Error, Error, Error}, // greaterEq,
+            {Error, Error, Bool, Error, Error}, // notEqual,
+            {Error, Error, Error, Error, Error}, // not_,
+            {Error, Error, Error, Error, Error}, // and_,
+            {Error, Error, Error, Error, Error} // or_,
         },
         {
             // String allowed operators
             {Error, Error, Error, Error, Error},
             {Error, Error, Error, Error, Error},
             {Error, Error, Error, Error, Error},
-            {Error, Error, Error, Error, Error}
+            {Error, Error, Error, Error, Error},
+            {Error, Error, Error, Bool, Error}, // isEqual,
+            {Error, Error, Error, Error, Error}, // lesser,
+            {Error, Error, Error, Error, Error}, // lesserEq,
+            {Error, Error, Error, Error, Error}, // greater,
+            {Error, Error, Error, Error, Error}, // greaterEq,
+            {Error, Error, Error, Bool, Error}, // notEqual,
+            {Error, Error, Error, Error, Error}, // not_,
+            {Error, Error, Error, Error, Error}, // and_,
+            {Error, Error, Error, Error, Error} // or_,
         },
         {
             // Bool allowed operators
             {Error, Error, Error, Error, Error},
             {Error, Error, Error, Error, Error},
             {Error, Error, Error, Error, Error},
-            {Error, Error, Error, Error, Error}
+            {Error, Error, Error, Error, Error},
+            {Error, Error, Error, Error, Bool}, // isEqual,
+            {Error, Error, Error, Error, Error}, // lesser,
+            {Error, Error, Error, Error, Error}, // lesserEq,
+            {Error, Error, Error, Error, Error}, // greater,
+            {Error, Error, Error, Error, Error}, // greaterEq,
+            {Error, Error, Error, Error, Bool}, // notEqual,
+            {Error, Error, Error, Error, Bool}, // not_,
+            {Error, Error, Error, Error, Bool}, // and_,
+            {Error, Error, Error, Error, Bool} // or_,
         },
     };
 };

@@ -129,6 +129,11 @@ void Grammaryzer::cleanLogs() {
 
 void Grammaryzer::printTypesStack() {
     logsStream << "TypeStack: [";
+    if (asserter->varStack.empty()) {
+        logsStream << "]" << std::endl;
+        return;
+    }
+
     std::for_each(asserter->varStack.crbegin(), asserter->varStack.crend() - 1, [&](const Asserter::Variable &var) {
         logsStream << var.name << ":" << asserter->typeToString[var.type] << ", ";
     });
@@ -139,6 +144,11 @@ void Grammaryzer::printTypesStack() {
 
 void Grammaryzer::printOperatorsStack() {
     logsStream << "OperatorStack: [";
+    if (asserter->operatorsStack.empty()) {
+        logsStream << "]" << std::endl;
+        return;
+    }
+
     std::for_each(asserter->operatorsStack.crbegin(), asserter->operatorsStack.crend() - 1, [&](const auto &oper) {
         logsStream << asserter->operatorToString[oper] << ", ";
     });

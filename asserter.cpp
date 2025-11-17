@@ -23,7 +23,7 @@ Asserter::Type Asserter::applyOperator(const Type first, const Type second, cons
     if (first >= Void || second >= Void)
         return Error;
 
-    if (op == Equal)
+    if (op == Assign)
         return first == second ? first : Error;
 
     return operatorsTable[first][op][second];

@@ -251,7 +251,7 @@ public:
 
                 if (const auto sf = dynamic_cast<Asserter::SFQuadruple *>
                         (asserter->quadruples[asserter->jumpStack[asserter->jumpStack.size() - 2]])) {
-                    sf->destiny = asserter->quadruples.size();
+                    sf->destiny = static_cast<long long>(asserter->quadruples.size());
                     asserter->jumpStack.remove(asserter->jumpStack.size() - 2);
                     printJumpStack();
                     return;
@@ -366,14 +366,14 @@ public:
 
                 if (const auto sf = dynamic_cast<Asserter::SFQuadruple *>
                         (asserter->quadruples[asserter->jumpStack.top()])) {
-                    sf->destiny = asserter->quadruples.size();
+                    sf->destiny = static_cast<long long>(asserter->quadruples.size());
                     asserter->jumpStack.remove(asserter->jumpStack.size() - 1);
                     printJumpStack();
                     return;
                 }
                 if (const auto si = dynamic_cast<Asserter::SIQuadruple *>
                         (asserter->quadruples[asserter->jumpStack.top()])) {
-                    si->destiny = asserter->quadruples.size();
+                    si->destiny = static_cast<long long>(asserter->quadruples.size());
                     asserter->jumpStack.remove(asserter->jumpStack.size() - 1);
                     printJumpStack();
                     return;

@@ -1,0 +1,8 @@
+def x, i of int;
+
+class
+	if (i == 1)
+		i = i + 1;
+	endif
+	do x = 1; dowhile (i > 1 && x > 1) enddo
+endclass

@@ -3,3 +3,5 @@ build*
 CMakeLists.txt.user
 /.idea/QtSettings.xml
 /.idea/analizador-talos.iml
+
+.idea/inspectionProfiles/Project_Default.xml

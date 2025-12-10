@@ -328,13 +328,8 @@ public:
         {
             {3202}, [&](Token& t)
             {
-                logsStream << "Found the end of Do While conditional statement, trying to add the condition quadruple"
-                    << std::endl;
-                Asserter::Variable temp = asserter->varStack.pop();
-                // asserter->quadruples.emplace_back(new Asserter::OperationQuadruple(asserter->operatorsStack.pop(),
-                //     asserter->varStack.pop(), temp, "r" + std::to_string(rCounter++)));
-                asserter->quadruples.emplace_back(
-                    new Asserter::SFQuadruple(asserter->varStack.pop(), asserter->jumpStack.pop()));
+                logsStream << "Found the end of Do While conditional statement, trying to add the condition quadruple" << std::endl;
+                asserter->quadruples.emplace_back(new Asserter::SFQuadruple(asserter->varStack.pop(), asserter->jumpStack.pop()));
             }
         },
         {

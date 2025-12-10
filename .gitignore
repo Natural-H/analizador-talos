@@ -2,3 +2,4 @@ cmake-build-*/
 build*
 CMakeLists.txt.user
 /.idea/QtSettings.xml
+/.idea/analizador-talos.iml

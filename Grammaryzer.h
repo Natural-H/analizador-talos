@@ -16,35 +16,38 @@
 #include <functional>
 #include <stack>
 
-struct ProductionAction {
+struct ProductionAction
+{
     std::vector<int> triggers;
-    std::function<void(Token &)> action;
+    std::function<void(Token&)> action;
 };
 
-struct GrammarResults {
+struct GrammarResults
+{
     std::string grammarResult;
     std::vector<std::string> semanticErrors;
 };
 
-class Grammaryzer : public QObject {
+class Grammaryzer : public QObject
+{
     Q_OBJECT
 
 signals:
-    void newLogs(const std::ostringstream &oss);
+    void newLogs(const std::ostringstream& oss);
 
-    void newQuadruples(const std::vector<Asserter::Quadruple *> &quadruples);
+    void newQuadruples(const std::vector<Asserter::Quadruple*>& quadruples);
 
 public:
     Grammaryzer();
 
     ~Grammaryzer() override;
 
-    void callActions(const std::vector<ProductionAction> &, std::stack<int> &, Token &currentToken);
+    void callActions(const std::vector<ProductionAction>&, std::stack<int>&, Token& currentToken);
 
     GrammarResults checkGrammar();
 
-    Tokenizer *tokenizer;
-    Asserter *asserter;
+    Tokenizer* tokenizer;
+    Asserter* asserter;
 
     std::ostringstream logsStream;
     long long rCounter = 0;
@@ -61,16 +64,19 @@ public:
 
     std::vector<ProductionAction> onTopActions = {
         {
-            {2000}, [&](Token &t) {
+            {2000}, [&](Token& t)
+            {
                 // for debug purposes only
                 printTypesTable();
             }
         },
         {
-            {2001}, [&](Token &t) {
+            {2001}, [&](Token& t)
+            {
                 logsStream << "Got declaration for: " << t.content << std::endl;
 
-                if (asserter->varExists(t.content)) {
+                if (asserter->varExists(t.content))
+                {
                     logsStream << "Error: " + t.content + " already in here." << std::endl;
                     asserter->errors.emplace_back(
                         "Error (L: " + std::to_string(t.line + 1) + "): " + t.content + " already in here.");
@@ -81,40 +87,45 @@ public:
             }
         },
         {
-            {2002}, [&](Token &t) {
+            {2002}, [&](Token& t)
+            {
                 const auto gotType = static_cast<Asserter::Type>(t.state - 1005);
                 logsStream << "Got Type: " << Asserter::typeToString[gotType] << std::endl;
-                for (auto &[name, type]: asserter->variables) {
+                for (auto& [name, type] : asserter->variables)
+                {
                     if (type == Asserter::Type::Unassigned)
                         type = gotType;
                 }
             }
         },
         {
-            {2003}, [&](Token &t) {
+            {2003}, [&](Token& t)
+            {
                 logsStream << "Got operand: " << t.content << std::endl;
 
-                if (t.state != 101) {
+                if (t.state != 101)
+                {
                     logsStream << "I think I got a constant value, so, I'm not searching if this exists" << std::endl;
                     Asserter::Type state;
 
                     // ugly conversion 'cause I wasn't using the original convention
-                    switch (t.state) {
-                        case Tokenizer::States::entero:
-                            state = Asserter::Type::Int;
-                            break;
-                        case Tokenizer::States::real:
-                        case Tokenizer::States::notacionCientifica:
-                            state = Asserter::Type::Float;
-                            break;
-                        case Tokenizer::States::constanteString:
-                            state = Asserter::Type::String;
-                            break;
-                        case Tokenizer::States::constanteCaracter:
-                            state = Asserter::Type::Char;
-                            break;
-                        default:
-                            state = Asserter::Type::Unassigned;
+                    switch (t.state)
+                    {
+                    case Tokenizer::States::entero:
+                        state = Asserter::Type::Int;
+                        break;
+                    case Tokenizer::States::real:
+                    case Tokenizer::States::notacionCientifica:
+                        state = Asserter::Type::Float;
+                        break;
+                    case Tokenizer::States::constanteString:
+                        state = Asserter::Type::String;
+                        break;
+                    case Tokenizer::States::constanteCaracter:
+                        state = Asserter::Type::Char;
+                        break;
+                    default:
+                        state = Asserter::Type::Unassigned;
                     }
 
                     asserter->varStack.push_back({t.content, state});
@@ -124,10 +135,12 @@ public:
 
                 const auto variable = std::find_if(asserter->variables.cbegin(),
                                                    asserter->variables.cend(),
-                                                   [&](const Asserter::Variable &var) {
+                                                   [&](const Asserter::Variable& var)
+                                                   {
                                                        return var.name == t.content;
                                                    });
-                if (variable == asserter->variables.end()) {
+                if (variable == asserter->variables.end())
+                {
                     logsStream << "Error: item " << t.content << " not found!" << std::endl;
                     asserter->errors.emplace_back(
                         "Error (L: " + std::to_string(t.line + 1) + "): item " + t.content + " not found!");
@@ -144,7 +157,8 @@ public:
             }
         },
         {
-            {2004}, [&](const Token &t) {
+            {2004}, [&](const Token& t)
+            {
                 logsStream << "Got equal sign: " << t.content << std::endl;
 
                 asserter->operatorsStack.emplace_back(Asserter::Operator::Assign);
@@ -152,31 +166,36 @@ public:
             }
         },
         {
-            {2007}, [&](Token &t) {
+            {2007}, [&](Token& t)
+            {
                 logsStream << "Got item: " << t.content << " added to operatorsStack" << std::endl;
                 asserter->operatorsStack.emplace_back(static_cast<Asserter::Operator>(t.state - 105));
                 printOperatorsStack();
             }
         },
         {
-            {2008}, [&](Token &t) {
+            {2008}, [&](Token& t)
+            {
                 logsStream << "Got item: " << t.content << " added MFF to operatorsStack" << std::endl;
                 asserter->operatorsStack.emplace_back(Asserter::Operator::Mff);
                 printOperatorsStack();
             }
         },
         {
-            {2009}, [&](Token &t) {
+            {2009}, [&](Token& t)
+            {
                 logsStream << "Got item: " << t.content << " removed MFF from operatorsStack" << std::endl;
                 asserter->operatorsStack.pop();
                 printOperatorsStack();
             }
         },
         {
-            {2010}, [&](Token &t) {
+            {2010}, [&](Token& t)
+            {
                 logsStream << "Got item: " << t.content << " time to check the operation" << std::endl;
 
-                if (asserter->operatorsStack.top() != Asserter::Operator::Assign) {
+                if (asserter->operatorsStack.top() != Asserter::Operator::Assign)
+                {
                     logsStream << "Top of operators Stack wasn't equals sign, it was: " << Asserter::operatorToString[
                         asserter->operatorsStack.top()] << std::endl;
                     asserter->errors.emplace_back(
@@ -187,19 +206,22 @@ public:
 
                 asserter->operatorsStack.pop();
 
-                const auto &operand1 = asserter->varStack.pop();
-                const auto &operand2 = asserter->varStack.pop();
+                const auto& operand1 = asserter->varStack.pop();
+                const auto& operand2 = asserter->varStack.pop();
 
-                if (operand2.type == operand1.type) {
+                if (operand2.type == operand1.type)
+                {
                     if (!asserter->hasErrors())
                         asserter->quadruples.emplace_back(new Asserter::AssignQuadruple(
                             Asserter::Operator::Assign, operand2, operand1.name
                         ));
 
                     logsStream << "Assigned!" << std::endl;
-                } else {
+                }
+                else
+                {
                     logsStream << "Error: Types [" << Asserter::typeToString[operand2.type] << "] and ["
-                            << Asserter::typeToString[operand1.type] << "] aren't equal!" << std::endl;
+                        << Asserter::typeToString[operand1.type] << "] aren't equal!" << std::endl;
                     asserter->errors.emplace_back(
                         "Error (L: " + std::to_string(t.line + 1) + "): Types [" + Asserter::typeToString[operand2.type]
                         + "] and [" + Asserter::typeToString[operand1.type] + "] aren't equal!");
@@ -207,30 +229,35 @@ public:
             }
         },
         {
-            {2999}, [&](Token &t) {
-                if (!asserter->varStack.empty()) {
+            {2999}, [&](Token& t)
+            {
+                if (!asserter->varStack.empty())
+                {
                     logsStream << "FATAL: typesStack is not empty! it has " << asserter->varStack.size() <<
-                            " items" << std::endl;
+                        " items" << std::endl;
                     asserter->errors.emplace_back("FATAL: typesStack is not empty! Check Logs");
                     printTypesStack();
                 }
-                if (!asserter->operatorsStack.empty()) {
+                if (!asserter->operatorsStack.empty())
+                {
                     logsStream << "FATAL: operatorsStack is not empty! it has " << asserter->operatorsStack.
-                            size() << " items, top: " << asserter->operatorsStack.top() << std::endl;
+                        size() << " items, top: " << asserter->operatorsStack.top() << std::endl;
                     asserter->errors.emplace_back("FATAL: operatorsStack is not empty! Check Logs");
                     printOperatorsStack();
                 }
             }
         },
         {
-            {3000}, [&](Token &t) {
+            {3000}, [&](Token& t)
+            {
                 logsStream << "Got an If statement, adding MFF" << std::endl;
                 asserter->operatorsStack.emplace_back(Asserter::Operator::Mff);
                 printOperatorsStack();
             }
         },
         {
-            {3001}, [&](Token &t) {
+            {3001}, [&](Token& t)
+            {
                 logsStream << "Finished condition for If statement, adding SF without destiny" << std::endl;
                 asserter->jumpStack.emplace_back(asserter->quadruples.size());
                 printJumpStack();
@@ -241,16 +268,18 @@ public:
             }
         },
         {
-            {3002}, [&](Token &t) {
+            {3002}, [&](Token& t)
+            {
                 logsStream << "Found else in If Statement, adding SI without destiny" << std::endl;
                 logsStream << "Adding " << asserter->quadruples.size() << " to jumpStack" << std::endl;
                 asserter->jumpStack.emplace_back(asserter->quadruples.size());
                 asserter->quadruples.emplace_back(new Asserter::SIQuadruple(-1));
                 logsStream << "Replacing jump of inst: " << asserter->jumpStack[asserter->jumpStack.size() - 2] <<
-                        " by " << asserter->quadruples.size() - 1 << std::endl;
+                    " by " << asserter->quadruples.size() - 1 << std::endl;
 
-                if (const auto sf = dynamic_cast<Asserter::SFQuadruple *>
-                        (asserter->quadruples[asserter->jumpStack[asserter->jumpStack.size() - 2]])) {
+                if (const auto sf = dynamic_cast<Asserter::SFQuadruple*>
+                    (asserter->quadruples[asserter->jumpStack[asserter->jumpStack.size() - 2]]))
+                {
                     sf->destiny = static_cast<long long>(asserter->quadruples.size());
                     asserter->jumpStack.remove(asserter->jumpStack.size() - 2);
                     printJumpStack();
@@ -258,18 +287,65 @@ public:
                 }
 
                 asserter->errors.emplace_back("FATAL: instruction " +
-                                              std::to_string(asserter->jumpStack[asserter->jumpStack.size() - 2]) +
-                                              " wasn't an SF!");
+                    std::to_string(asserter->jumpStack[asserter->jumpStack.size() - 2]) +
+                    " wasn't an SF!");
             }
         },
         {
-            {3004}, [&](Token &t) {
+            {3004}, [&](Token& t)
+            {
                 logsStream << "Got endif keyword, trying to remove MFF" << std::endl;
                 const auto removed = asserter->operatorsStack.pop();
 
                 logsStream << "Removing: " << Asserter::operatorToString[removed] << std::endl;
 
-                if (removed != Asserter::Operator::Mff) {
+                if (removed != Asserter::Operator::Mff)
+                {
+                    asserter->errors.emplace_back(
+                        "FATAL: Removed " + Asserter::operatorToString[removed] + " instead of MFF!");
+                }
+
+                printOperatorsStack();
+            }
+        },
+        {
+            {3200}, [&](Token& t)
+            {
+                logsStream << "Got Do Statement, Adding: " << asserter->quadruples.size() << "to jumpstack" <<
+                    std::endl;
+                asserter->jumpStack.emplace_back(asserter->quadruples.size());
+                printJumpStack();
+            }
+        },
+        {
+            {3201}, [&](Token& t)
+            {
+                logsStream << "Found the Do While conditional statement, adding an MFF so this does not explode";
+                asserter->operatorsStack.emplace_back(Asserter::Operator::Mff);
+                printOperatorsStack();
+            }
+        },
+        {
+            {3202}, [&](Token& t)
+            {
+                logsStream << "Found the end of Do While conditional statement, trying to add the condition quadruple"
+                    << std::endl;
+                Asserter::Variable temp = asserter->varStack.pop();
+                // asserter->quadruples.emplace_back(new Asserter::OperationQuadruple(asserter->operatorsStack.pop(),
+                //     asserter->varStack.pop(), temp, "r" + std::to_string(rCounter++)));
+                asserter->quadruples.emplace_back(
+                    new Asserter::SFQuadruple(asserter->varStack.pop(), asserter->jumpStack.pop()));
+            }
+        },
+        {
+            {3203}, [&](Token& t)
+            {
+                logsStream << "Found End of Do, attempting to remove MFF";
+                const auto removed = asserter->operatorsStack.pop();
+
+                logsStream << "Removing: " << Asserter::operatorToString[removed] << std::endl;
+                if (removed != Asserter::Operator::Mff)
+                {
                     asserter->errors.emplace_back(
                         "FATAL: Removed " + Asserter::operatorToString[removed] + " instead of MFF!");
                 }
@@ -277,11 +353,13 @@ public:
                 printOperatorsStack();
             }
         }
+
     };
 
     std::vector<ProductionAction> afterStateActions = {
         {
-            {2005}, [&](Token &t) {
+            {2005}, [&](Token& t)
+            {
                 logsStream << "Trying to apply Mul/Div operator." << std::endl;
                 printTypesStack();
                 printOperatorsStack();
@@ -295,7 +373,8 @@ public:
             }
         },
         {
-            {2006}, [&](Token &t) {
+            {2006}, [&](Token& t)
+            {
                 logsStream << "Trying to apply Add/Diff operator." << std::endl;
                 printTypesStack();
                 printOperatorsStack();
@@ -309,7 +388,8 @@ public:
             }
         },
         {
-            {2011}, [&](Token &t) {
+            {2011}, [&](Token& t)
+            {
                 logsStream << "Trying to apply Or operator." << std::endl;
                 printTypesStack();
                 printOperatorsStack();
@@ -322,7 +402,8 @@ public:
             }
         },
         {
-            {2012}, [&](Token &t) {
+            {2012}, [&](Token& t)
+            {
                 logsStream << "Trying to apply And operator." << std::endl;
                 printTypesStack();
                 printOperatorsStack();
@@ -335,12 +416,14 @@ public:
             }
         },
         {
-            {2013}, [&](Token &t) {
+            {2013}, [&](Token& t)
+            {
                 // Not Operator reserved action, maybe we won't need this
             }
         },
         {
-            {2014}, [&](Token &t) {
+            {2014}, [&](Token& t)
+            {
                 logsStream << "Trying to apply an OpRel operator." << std::endl;
                 printTypesStack();
                 printOperatorsStack();
@@ -358,21 +441,24 @@ public:
             }
         },
         {
-            {3003}, [&](Token &t) {
+            {3003}, [&](Token& t)
+            {
                 logsStream << "Found end of instructions, replacing " << asserter->jumpStack.top() << " by " << asserter
-                        ->quadruples.size() - 1
-                        << std::endl;
+                    ->quadruples.size() - 1
+                    << std::endl;
                 printJumpStack();
 
-                if (const auto sf = dynamic_cast<Asserter::SFQuadruple *>
-                        (asserter->quadruples[asserter->jumpStack.top()])) {
+                if (const auto sf = dynamic_cast<Asserter::SFQuadruple*>
+                    (asserter->quadruples[asserter->jumpStack.top()]))
+                {
                     sf->destiny = static_cast<long long>(asserter->quadruples.size());
                     asserter->jumpStack.remove(asserter->jumpStack.size() - 1);
                     printJumpStack();
                     return;
                 }
-                if (const auto si = dynamic_cast<Asserter::SIQuadruple *>
-                        (asserter->quadruples[asserter->jumpStack.top()])) {
+                if (const auto si = dynamic_cast<Asserter::SIQuadruple*>
+                    (asserter->quadruples[asserter->jumpStack.top()]))
+                {
                     si->destiny = static_cast<long long>(asserter->quadruples.size());
                     asserter->jumpStack.remove(asserter->jumpStack.size() - 1);
                     printJumpStack();
@@ -380,31 +466,36 @@ public:
                 }
 
                 asserter->errors.emplace_back("FATAL: instruction " + std::to_string(asserter->jumpStack[1]) +
-                                              " wasn't an SF or SI!");
+                    " wasn't an SF or SI!");
             }
         },
+        {
+        }
     };
 
 private:
-    void tryApplyOperators(const std::vector<Asserter::Operator> &expectedOperators, const Token &t) {
+    void tryApplyOperators(const std::vector<Asserter::Operator>& expectedOperators, const Token& t)
+    {
         if (asserter->operatorsStack.empty())
             return;
 
         while (std::find(expectedOperators.cbegin(), expectedOperators.cend(), asserter->operatorsStack.top())
-               != expectedOperators.cend()) {
-            const auto &operand2 = asserter->varStack.pop();
-            const auto &operand1 = asserter->varStack.pop();
+            != expectedOperators.cend())
+        {
+            const auto& operand2 = asserter->varStack.pop();
+            const auto& operand1 = asserter->varStack.pop();
 
-            const auto &op = asserter->operatorsStack.pop();
+            const auto& op = asserter->operatorsStack.pop();
 
             logsStream << "Applying " << Asserter::typeToString[operand1.type] << ", " << Asserter::typeToString[
                 operand2.type] << " with operator: " << Asserter::operatorToString[op] << std::endl;
 
-            const auto &result = asserter->applyOperator(operand1.type, operand2.type, op);
-            if (result == Asserter::Type::Error) {
+            const auto& result = asserter->applyOperator(operand1.type, operand2.type, op);
+            if (result == Asserter::Type::Error)
+            {
                 logsStream << "Error: incompatible types, cannot do [" << Asserter::typeToString[operand1.type] <<
-                        " " << Asserter::operatorToString[op] << " " << Asserter::typeToString[operand2.type] << "]"
-                        << std::endl;
+                    " " << Asserter::operatorToString[op] << " " << Asserter::typeToString[operand2.type] << "]"
+                    << std::endl;
 
                 asserter->errors.emplace_back(
                     "Error (L: " + std::to_string(t.line + 1) + "): incompatible types, cannot do [" + Asserter::
@@ -713,7 +804,7 @@ private:
         },
     };
 
-    std::vector<std::vector<int> > matrizProducciones = {
+    std::vector<std::vector<int>> matrizProducciones = {
         {3, 2, 7},
         {5, 2},
         {4, 2},
@@ -767,7 +858,7 @@ private:
         {130, 101},
         {129},
         {130},
-        {1015, 13, 1024, 119, 29, 120, 1016},
+        {1015, 3200, 13, 1024, 3201, 119, 29, 120, 1016,3202, 3203},
         {1011, 3000, 119, 29, 120, 3001, 13, 24, 25, 3003, 1014, 3004},
         {1012, 119, 29, 120, 13, 24},
         {-100},

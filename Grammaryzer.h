@@ -17,6 +17,7 @@
 #include <stack>
 
 #include "asserter.h"
+#include "asserter.h"
 
 struct ProductionAction {
     std::vector<int> triggers;
@@ -222,6 +223,12 @@ public:
                     asserter->errors.emplace_back("FATAL: operatorsStack is not empty! Check Logs");
                     printOperatorsStack();
                 }
+                if (!asserter->jumpStack.empty()) {
+                    logsStream << "FATAL: jumpStack is not empty! it has " << asserter->jumpStack.
+                            size() << " items, top: " << asserter->jumpStack.top() << std::endl;
+                    asserter->errors.emplace_back("FATAL: jumpStack is not empty! Check Logs");
+                    printJumpStack();
+                }
             }
         },
         {
@@ -290,14 +297,16 @@ public:
         },
         {
             {3101}, [&](Token &t) {
-                logsStream << "Got end of condition of while, adding SF without destiny and adding it to jumpStack" << std::endl;
+                logsStream << "Got end of condition of while, adding SF without destiny and adding it to jumpStack" <<
+                        std::endl;
                 asserter->quadruples.push_back(new Asserter::SFQuadruple(asserter->varStack.pop(), -1));
                 asserter->jumpStack.emplace_back(asserter->quadruples.size() - 1);
             }
         },
         {
             {3102}, [&](Token &t) {
-                logsStream << "Got endwhile keyword adding SI, removing MFF and replacing SF from " << asserter->jumpStack.top()
+                logsStream << "Got endwhile keyword adding SI, removing MFF and replacing SF from " << asserter->
+                        jumpStack.top()
                         << " to " << asserter->quadruples.size() << std::endl;
                 asserter->operatorsStack.pop();
 
@@ -352,7 +361,55 @@ public:
 
                 printOperatorsStack();
             }
-        }
+        },
+        {
+            {2300}, [&](Token &t) {
+                logsStream << "Found the for keyword, adding an mff to opStack" << std::endl;
+                asserter->operatorsStack.emplace_back(Asserter::Operator::Mff);
+            }
+        },
+        {
+            {2301}, [&](Token &t) {
+                logsStream << "Got ( for the for statement, adding a = to opStack to trick it into an assignation" <<
+                        std::endl;
+                asserter->operatorsStack.emplace_back(Asserter::Operator::Assign);
+            }
+        },
+        {
+            {3302}, [&](Token &t) {
+                logsStream << "Got the " << t.content << " keyword adding next quad to jumpStack" << std::endl;
+                asserter->jumpStack.emplace_back(asserter->quadruples.size());
+            }
+        },
+        {
+            {3304}, [&](Token &t) {
+                logsStream << "Adding a SV without destiny" << std::endl;
+                asserter->quadruples.emplace_back(new Asserter::SVQuadruple(asserter->varStack.pop(), -1));
+                asserter->jumpStack.emplace_back(asserter->quadruples.size() - 1);
+            }
+        },
+        {
+            {3305}, [&](Token &t) {
+                logsStream << "Got endfor keyword adding SI, removing MFF and replacing SV from " << asserter->
+                        jumpStack.top()
+                        << " to " << asserter->quadruples.size() << std::endl;
+                asserter->operatorsStack.pop();
+
+                const auto svPos = asserter->jumpStack.pop();
+                const auto beginConditionPos = asserter->jumpStack.pop();
+                asserter->quadruples.push_back(new Asserter::SIQuadruple(beginConditionPos));
+
+                if (const auto sv = dynamic_cast<Asserter::SVQuadruple *>
+                        (asserter->quadruples[svPos])) {
+                    sv->destiny = static_cast<long long>(asserter->quadruples.size());
+                    printJumpStack();
+                    return;
+                }
+
+                asserter->errors.emplace_back("FATAL: instruction " + std::to_string(asserter->jumpStack.top()) +
+                                              " wasn't an SV!");
+            }
+        },
     };
 
     std::vector<ProductionAction> afterStateActions = {
@@ -463,6 +520,12 @@ public:
                                                   " wasn't an SF or SI!"));
             }
         },
+        {
+            {2303}, [&](Token &t) {
+                logsStream << "Got idk what I'm doing, but adding a > to opStack" << std::endl;
+                asserter->operatorsStack.emplace_back(Asserter::Operator::Greater);
+            }
+        }
     };
 
 private:
@@ -900,7 +963,7 @@ private:
         {1013, 3002, 13},
         {-100},
         {1017, 3100, 119, 29, 120, 3101, 13, 1018, 3102},
-        {1025, 101, 119, 29, 1030, 29, 120, 13, 1026},
+        {1025, 2300, 101, 2003, 2003, 119, 2301, 29, 1030, 2010, 3302, 29, 2303, 2014, 120, 3304, 13, 1026, 3305},
         {1029, 29},
         {31, 2011, 30},
         {118, 2007, 29},

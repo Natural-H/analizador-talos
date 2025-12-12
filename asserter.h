@@ -39,7 +39,8 @@ public:
         Mff,
         SI,
         SF,
-        SV
+        SV,
+        Write
     };
 
     struct Variable {
@@ -79,6 +80,15 @@ public:
 
         AssignQuadruple(const Operator operator_, Variable variable, std::string name) : Quadruple(operator_),
             toAssign(std::move(variable)), result(std::move(name)) {
+        };
+    };
+
+    struct WriteQuadruple : Quadruple {
+        std::string result;
+
+        WriteQuadruple() = default;
+
+        explicit WriteQuadruple(std::string name) : Quadruple(Write), result(std::move(name)) {
         };
     };
 

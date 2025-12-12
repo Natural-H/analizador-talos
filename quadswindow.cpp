@@ -39,6 +39,8 @@ void QuadsWindow::drawQuadruples(const std::vector<Asserter::Quadruple *> &quadr
             addSF(sf, i);
         else if (const auto sv = dynamic_cast<Asserter::SVQuadruple *>(quad))
             addSV(sv, i);
+        else if (const auto wr = dynamic_cast<Asserter::WriteQuadruple *>(quad))
+            addWrite(wr, i);
     }
 }
 
@@ -116,6 +118,23 @@ void QuadsWindow::addSV(const Asserter::SVQuadruple *svQuadruple, const int inde
     const auto operand1 = new QTableWidgetItem(svQuadruple->condition.name.data());
     const auto operand2 = new QTableWidgetItem(QString(""));
     const auto result = new QTableWidgetItem(QString::number(svQuadruple->destiny));
+
+    const auto rowCount = ui->quadruplesTable->rowCount();
+
+    ui->quadruplesTable->insertRow(rowCount);
+    ui->quadruplesTable->setItem(rowCount, 0, number);
+    ui->quadruplesTable->setItem(rowCount, 1, operator_);
+    ui->quadruplesTable->setItem(rowCount, 2, operand1);
+    ui->quadruplesTable->setItem(rowCount, 3, operand2);
+    ui->quadruplesTable->setItem(rowCount, 4, result);
+}
+
+void QuadsWindow::addWrite(const Asserter::WriteQuadruple *wrQuadruple, int index) const {
+    const auto number = new QTableWidgetItem(QString::number(index));
+    const auto operator_ = new QTableWidgetItem(Asserter::operatorToString[wrQuadruple->op].data());
+    const auto operand1 = new QTableWidgetItem("");
+    const auto operand2 = new QTableWidgetItem("");
+    const auto result = new QTableWidgetItem(wrQuadruple->result.data());
 
     const auto rowCount = ui->quadruplesTable->rowCount();
 

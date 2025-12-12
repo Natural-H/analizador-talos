@@ -18,6 +18,8 @@
 
 #include "asserter.h"
 #include "asserter.h"
+#include "asserter.h"
+#include "asserter.h"
 
 struct ProductionAction {
     std::vector<int> triggers;
@@ -207,6 +209,20 @@ public:
                         "Error (L: " + std::to_string(t.line + 1) + "): Types [" + Asserter::typeToString[operand2.type]
                         + "] and [" + Asserter::typeToString[operand1.type] + "] aren't equal!");
                 }
+            }
+        },
+        {
+            {2015}, [&](Token &t) {
+                logsStream << "Got a write statement, adding MFF op into operatorsStack" << std::endl;
+                asserter->operatorsStack.emplace_back(Asserter::Operator::Mff);
+                printOperatorsStack();
+            }
+        },
+        {
+            {2017}, [&](Token &t) {
+                logsStream << "Got the end of write, removing MFF" << std::endl;
+                asserter->operatorsStack.pop();
+                printOperatorsStack();
             }
         },
         {
@@ -488,6 +504,21 @@ public:
                 };
 
                 tryApplyOperators(expectedOperators, t);
+            }
+        },
+        {
+            {2016}, [&](Token &t) {
+                logsStream << "Trying to make a write quadruple" << std::endl;
+
+                const auto [name, type] = asserter->varStack.pop();
+
+                if (!asserter->errors.empty()) {
+                    logsStream << "But I have errors, so I'm not making it" << std::endl;
+                    return;
+                }
+
+                asserter->quadruples.emplace_back(new Asserter::WriteQuadruple(name));
+                printOperatorsStack();
             }
         },
         {
@@ -947,9 +978,9 @@ private:
         {15, 123, 2010, 13},
         {21, 123, 13},
         {109, 2004, 29},
-        {1020, 119, 17, 120},
+        {1020, 2015, 119, 17, 2016, 120, 2017},
         {29, 18},
-        {124, 17},
+        {124, 2016, 17},
         {-100},
         {1019, 119, 101, 6, 120},
         {129, 101},

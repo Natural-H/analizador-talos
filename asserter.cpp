@@ -62,5 +62,6 @@ std::map<Asserter::Operator, std::string> Asserter::operatorToString = {
     {Mff, "Mff"},
     {SI, "SI"},
     {SF, "SF"},
-    {SV, "SV"}
+    {SV, "SV"},
+    {Write, "Write"}
 };

@@ -20,6 +20,8 @@
 #include "asserter.h"
 #include "asserter.h"
 #include "asserter.h"
+#include "asserter.h"
+#include "asserter.h"
 
 struct ProductionAction {
     std::vector<int> triggers;
@@ -73,16 +75,48 @@ public:
         },
         {
             {2001}, [&](Token &t) {
-                logsStream << "Got declaration for: " << t.content << std::endl;
+                switch (asserter->state) {
+                    case Asserter::ID1States::declaring:
+                        logsStream << "Got declaration for: " << t.content << std::endl;
 
-                if (asserter->varExists(t.content)) {
-                    logsStream << "Error: " + t.content + " already in here." << std::endl;
-                    asserter->errors.emplace_back(
-                        "Error (L: " + std::to_string(t.line + 1) + "): " + t.content + " already in here.");
-                    return;
+                        if (asserter->varExists(t.content)) {
+                            logsStream << "Error: " + t.content + " already in here." << std::endl;
+                            asserter->errors.emplace_back(
+                                "Error (L: " + std::to_string(t.line + 1) + "): " + t.content +
+                                " already in here.");
+                            return;
+                        }
+
+                        asserter->variables.push_back({t.content, Asserter::Type::Unassigned});
+                        break;
+                    case Asserter::ID1States::reading:
+                        logsStream << "Trying to make a read quadruple" << std::endl;
+
+                        const auto variable = std::find_if(asserter->variables.cbegin(),
+                                                           asserter->variables.cend(),
+                                                           [&](const Asserter::Variable &var) {
+                                                               return var.name == t.content;
+                                                           });
+
+                        if (!asserter->errors.empty()) {
+                            logsStream << "But I have errors, so I'm not making it" << std::endl;
+                            return;
+                        }
+
+                        if (variable == asserter->variables.end()) {
+                            logsStream << "Error: item " << t.content << " not found!" << std::endl;
+                            asserter->errors.emplace_back(
+                                "Error (L: " + std::to_string(t.line + 1) + "): item " + t.content +
+                                " not found!");
+
+                            return;
+                        }
+
+                        asserter->quadruples.emplace_back(new Asserter::ReadQuadruple(variable->name));
+                        printOperatorsStack();
+
+                        break;
                 }
-
-                asserter->variables.push_back({t.content, Asserter::Type::Unassigned});
             }
         },
         {
@@ -223,6 +257,45 @@ public:
                 logsStream << "Got the end of write, removing MFF" << std::endl;
                 asserter->operatorsStack.pop();
                 printOperatorsStack();
+            }
+        },
+        {
+            {2018}, [&](Token &t) {
+                logsStream << "Got a read statement, changing state of ID1 to reading" << std::endl;
+                asserter->state = Asserter::ID1States::reading;
+            }
+        },
+        {
+            {2019}, [&](Token &t) {
+                logsStream << "Trying to make a read quadruple" << std::endl;
+
+                const auto variable = std::find_if(asserter->variables.cbegin(),
+                                                   asserter->variables.cend(),
+                                                   [&](const Asserter::Variable &var) {
+                                                       return var.name == t.content;
+                                                   });
+
+                if (!asserter->errors.empty()) {
+                    logsStream << "But I have errors, so I'm not making it" << std::endl;
+                    return;
+                }
+
+                if (variable == asserter->variables.end()) {
+                    logsStream << "Error: item " << t.content << " not found!" << std::endl;
+                    asserter->errors.emplace_back(
+                        "Error (L: " + std::to_string(t.line + 1) + "): item " + t.content + " not found!");
+
+                    return;
+                }
+
+                asserter->quadruples.emplace_back(new Asserter::ReadQuadruple(variable->name));
+                printOperatorsStack();
+            }
+        },
+        {
+            {2020}, [&](Token &t) {
+                logsStream << "Got the end of the read statement, changing state of ID1 to declaring" << std::endl;
+                asserter->state = Asserter::ID1States::declaring;
             }
         },
         {
@@ -560,7 +633,8 @@ public:
         }
     };
 
-private:
+private
+:
     void tryApplyOperators(const std::vector<Asserter::Operator> &expectedOperators, const Token &t) {
         if (asserter->operatorsStack.empty())
             return;
@@ -983,7 +1057,7 @@ private:
         {29, 18},
         {124, 2016, 17},
         {-100},
-        {1019, 119, 101, 6, 120},
+        {1019, 2018, 119, 101, 2019, 6, 120, 2020},
         {129, 101},
         {130, 101},
         {129},

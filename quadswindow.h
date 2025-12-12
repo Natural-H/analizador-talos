@@ -31,6 +31,7 @@ public:
     void addSF(const Asserter::SFQuadruple*, int index) const;
     void addSV(const Asserter::SVQuadruple*, int index) const;
     void addWrite(const Asserter::WriteQuadruple*, int index) const;
+    void addRead(const Asserter::ReadQuadruple*, int index) const;
 
 public slots:
     void drawQuadruples(const std::vector<Asserter::Quadruple*>&) const;

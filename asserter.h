@@ -10,6 +10,13 @@ class Asserter {
 public:
     Asserter();
 
+    enum ID1States {
+        declaring,
+        reading
+    };
+
+    ID1States state = declaring;
+
     enum Type {
         Int = 0,
         Float,
@@ -40,7 +47,8 @@ public:
         SI,
         SF,
         SV,
-        Write
+        Write,
+        Read
     };
 
     struct Variable {
@@ -89,6 +97,15 @@ public:
         WriteQuadruple() = default;
 
         explicit WriteQuadruple(std::string name) : Quadruple(Write), result(std::move(name)) {
+        };
+    };
+
+    struct ReadQuadruple : Quadruple {
+        std::string result;
+
+        ReadQuadruple() = default;
+
+        explicit ReadQuadruple(std::string name) : Quadruple(Read), result(std::move(name)) {
         };
     };
 

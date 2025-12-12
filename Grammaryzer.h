@@ -598,8 +598,7 @@ public:
             {3003},
             [&](Token &t) {
                 logsStream << "Found end of instructions, replacing " << asserter->
-                        jumpStack.top() << " by " << asserter
-                        ->quadruples.size() - 1
+                        jumpStack.top() << " by " << asserter->quadruples.size()
                         << std::endl;
 
                 printJumpStack();

@@ -1,0 +1,13 @@
+def i, t of int;
+def y, x of float;
+
+class
+	do
+		for i (t to y)
+			read(t);
+			if (x > 3 && i == 2)
+				i = i + 1;
+			endif
+		endfor
+	dowhile (x >= 1) enddo
+endclass

@@ -1,0 +1,12 @@
+def x of int;
+
+class
+	x = 1 + 1;
+	write("value of x is ", x);
+
+	if (x > 1)
+		x = x / 2;
+	endif
+
+	write("new value of x is ", x);
+endclass

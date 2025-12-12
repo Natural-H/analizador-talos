@@ -553,8 +553,9 @@ public:
         },
         {
             {2303}, [&](Token &t) {
-                logsStream << "Got idk what I'm doing, but adding a > to opStack" << std::endl;
+                logsStream << "Got the end of the condition, adding a > to operatorStack" << std::endl;
                 asserter->operatorsStack.emplace_back(Asserter::Operator::Greater);
+                printOperatorsStack();
             }
         }
     };

@@ -1,0 +1,11 @@
+def i of int;
+
+class
+	for i (1 to 10)
+		if (i == 5)
+			write("i equals five: ", i);
+		endif
+	endfor
+
+    i = i + 1;
+endclass

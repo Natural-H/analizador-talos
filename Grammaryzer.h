@@ -636,7 +636,7 @@ public:
 private
 :
     void tryApplyOperators(const std::vector<Asserter::Operator> &expectedOperators, const Token &t) {
-        if (asserter->operatorsStack.empty())
+        if (asserter->operatorsStack.isEmpty())
             return;
 
         while (std::find(expectedOperators.cbegin(), expectedOperators.cend(), asserter->operatorsStack.top())
@@ -677,6 +677,9 @@ private
 
             printTypesStack();
             printOperatorsStack();
+
+            if (asserter->operatorsStack.isEmpty())
+                return;
         }
     }
 
